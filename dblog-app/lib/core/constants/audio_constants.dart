@@ -25,4 +25,18 @@ class AudioConstants {
   static const double thresholdModerate = 70.0;
   static const double thresholdLoud = 85.0;
   static const double thresholdDangerous = 100.0;
+
+  // -- Optimización de batería (modo vigilancia) --
+
+  /// Intervalo de muestreo en modo pasivo (ms).
+  static const int passiveIntervalMs = 500;
+
+  /// Intervalo de muestreo en modo activo/alerta (ms).
+  static const int activeIntervalMs = 100;
+
+  /// Offset en dB por debajo del umbral para entrar en modo alerta.
+  static const double alertThresholdOffset = 10.0;
+
+  /// Porcentaje de batería mínimo para mantener la vigilancia activa.
+  static const int lowBatteryThreshold = 15;
 }
