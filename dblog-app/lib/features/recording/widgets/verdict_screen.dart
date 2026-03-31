@@ -5,6 +5,7 @@ import '../../../core/legal/legal_provider.dart';
 import '../../../core/legal/models/verdict_result.dart';
 import '../../../shared/theme/app_theme.dart';
 import '../../history/widgets/history_screen.dart';
+import '../../report/widgets/report_form_screen.dart';
 
 /// Pantalla de veredicto post-grabacion.
 /// Muestra el resultado de la medicion comparado con el limite legal,
@@ -129,13 +130,19 @@ class _VerdictScreenState extends State<VerdictScreen> {
   Widget _buildActions(BuildContext context) {
     return Column(
       children: [
-        // Generar informe PDF (deshabilitado).
+        // Generar informe PDF.
         SizedBox(
           width: double.infinity,
           child: OutlinedButton.icon(
-            onPressed: null,
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const ReportFormScreen(),
+                ),
+              );
+            },
             icon: const Icon(Icons.picture_as_pdf_rounded),
-            label: const Text('Generar informe PDF (proximamente)'),
+            label: const Text('Generar informe PDF'),
           ),
         ),
         const SizedBox(height: 12),

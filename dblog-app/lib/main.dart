@@ -13,6 +13,7 @@ import 'features/meter/providers/meter_provider.dart';
 import 'features/onboarding/providers/onboarding_provider.dart';
 import 'features/profile/providers/profile_provider.dart';
 import 'features/recording/providers/recording_provider.dart';
+import 'features/report/providers/report_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -54,6 +55,9 @@ void main() async {
               ),
               ChangeNotifierProvider(
                 create: (_) => LegalProvider(),
+              ),
+              ChangeNotifierProvider(
+                create: (_) => ReportProvider(),
               ),
             ],
             child: const App(),
