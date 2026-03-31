@@ -1,10 +1,13 @@
 # Tech Lead Memory — dBLog
 
 ## Aprendizajes
-_Sin entradas aún._
+- [2026-03-31] GitHub no permite auto-aprobación cuando el token del PR creator es el mismo que aprueba. Dejar comentario de revisión como alternativa
+- [2026-03-31] Squash merge mantiene historial limpio
 
 ## Patrones del proyecto
-_Sin entradas aún._
+- PRs van a main directamente
+- Conventional commits en español
+- flutter analyze debe pasar sin errores
 
 ## Errores a evitar
-_Sin entradas aún._
+- No intentar gh pr review --approve cuando el token es del mismo usuario que creó el PR
