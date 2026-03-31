@@ -6,6 +6,7 @@ import 'package:noise_meter/noise_meter.dart';
 
 import '../../../core/audio/audio_permission_service.dart';
 import '../../../core/audio/noise_meter_service.dart';
+import '../../../core/calibration/calibration_service.dart';
 import '../../../core/constants/audio_constants.dart';
 import '../models/db_reading.dart';
 
@@ -14,6 +15,7 @@ import '../models/db_reading.dart';
 class MeterProvider extends ChangeNotifier with WidgetsBindingObserver {
   final NoiseMeterService _noiseMeterService;
   final AudioPermissionService _permissionService;
+  final CalibrationService _calibrationService;
 
   StreamSubscription<NoiseReading>? _subscription;
 
@@ -56,12 +58,21 @@ class MeterProvider extends ChangeNotifier with WidgetsBindingObserver {
   // Guardamos si estaba escuchando antes de ir a background.
   bool _wasListeningBeforePause = false;
 
+  /// Servicio de calibración expuesto para el diálogo.
+  CalibrationService get calibrationService => _calibrationService;
+
+  /// Offset de calibración actual en dB.
+  double get calibrationOffset => _calibrationService.offset;
+
   MeterProvider({
     NoiseMeterService? noiseMeterService,
     AudioPermissionService? permissionService,
+    CalibrationService? calibrationService,
   })  : _noiseMeterService = noiseMeterService ?? NoiseMeterService(),
-        _permissionService = permissionService ?? AudioPermissionService() {
+        _permissionService = permissionService ?? AudioPermissionService(),
+        _calibrationService = calibrationService ?? CalibrationService() {
     WidgetsBinding.instance.addObserver(this);
+    _calibrationService.load();
   }
 
   // -- Lifecycle --
@@ -132,14 +143,20 @@ class MeterProvider extends ChangeNotifier with WidgetsBindingObserver {
 
   // -- Callbacks internos --
 
+  /// Notifica cambios tras modificar la calibración desde el diálogo.
+  void onCalibrationChanged() {
+    notifyListeners();
+  }
+
   void _onNoiseReading(NoiseReading reading) {
     final now = DateTime.now();
-    // noise_meter reporta meanDecibel y maxDecibel.
-    final meanDb = reading.meanDecibel.clamp(
+    final offset = _calibrationService.offset;
+    // noise_meter reporta meanDecibel y maxDecibel; se aplica offset de calibración.
+    final meanDb = (reading.meanDecibel + offset).clamp(
       AudioConstants.minDb,
       AudioConstants.maxDb,
     );
-    final peakDb = reading.maxDecibel.clamp(
+    final peakDb = (reading.maxDecibel + offset).clamp(
       AudioConstants.minDb,
       AudioConstants.maxDb,
     );

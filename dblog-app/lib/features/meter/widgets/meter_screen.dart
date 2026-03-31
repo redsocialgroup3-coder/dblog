@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../models/db_reading.dart';
 import '../providers/meter_provider.dart';
+import 'calibration_dialog.dart';
 import 'db_chart.dart';
 import 'db_display.dart';
 import 'db_level_bar.dart';
@@ -18,6 +19,23 @@ class MeterScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('dBLog'),
         actions: [
+          Consumer<MeterProvider>(
+            builder: (context, provider, _) {
+              return IconButton(
+                icon: const Icon(Icons.tune),
+                tooltip: 'Calibración',
+                onPressed: () {
+                  showDialog(
+                    context: context,
+                    builder: (_) => CalibrationDialog(
+                      calibrationService: provider.calibrationService,
+                      onChanged: provider.onCalibrationChanged,
+                    ),
+                  );
+                },
+              );
+            },
+          ),
           Consumer<MeterProvider>(
             builder: (context, provider, _) {
               if (!provider.isListening) return const SizedBox.shrink();
@@ -63,6 +81,8 @@ class MeterScreen extends StatelessWidget {
           return SafeArea(
             child: Column(
               children: [
+                // Disclaimer de medición orientativa.
+                const _DisclaimerBanner(),
                 const SizedBox(height: 24),
                 // Valor numérico de dB.
                 DbDisplay(db: provider.currentDb),
@@ -178,6 +198,31 @@ class _PermissionDeniedView extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _DisclaimerBanner extends StatelessWidget {
+  const _DisclaimerBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      color: Colors.orange.withValues(alpha: 0.15),
+      child: const Row(
+        children: [
+          Icon(Icons.info_outline, size: 14, color: Colors.orange),
+          SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              'Medición orientativa - no sustituye sonómetro homologado',
+              style: TextStyle(fontSize: 11, color: Colors.orange),
+            ),
+          ),
+        ],
       ),
     );
   }
