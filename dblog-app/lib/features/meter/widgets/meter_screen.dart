@@ -6,6 +6,7 @@ import '../../../core/payments/payment_provider.dart';
 import '../../../shared/theme/app_theme.dart';
 import '../../history/widgets/history_screen.dart';
 import '../../profile/widgets/profile_screen.dart';
+import '../../surveillance/widgets/surveillance_screen.dart';
 import '../../recording/providers/recording_provider.dart';
 import '../../recording/widgets/recording_overlay.dart';
 import '../../recording/widgets/verdict_screen.dart';
@@ -265,6 +266,18 @@ class _MeterScreenState extends State<MeterScreen> {
                 label: 'Medidor',
                 isActive: true,
                 onTap: () {},
+              ),
+              _NavItem(
+                icon: Icons.shield_moon_rounded,
+                label: 'Vigilancia',
+                isActive: false,
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const SurveillanceScreen(),
+                    ),
+                  );
+                },
               ),
               _NavItem(
                 icon: Icons.history_rounded,
