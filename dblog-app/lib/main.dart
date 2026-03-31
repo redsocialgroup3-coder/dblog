@@ -9,6 +9,7 @@ import 'core/auth/auth_provider.dart';
 import 'features/history/providers/history_provider.dart';
 import 'features/meter/providers/meter_provider.dart';
 import 'features/onboarding/providers/onboarding_provider.dart';
+import 'features/profile/providers/profile_provider.dart';
 import 'features/recording/providers/recording_provider.dart';
 
 void main() async {
@@ -42,6 +43,9 @@ void main() async {
               ),
               ChangeNotifierProvider(
                 create: (_) => AuthProvider(),
+              ),
+              ChangeNotifierProvider(
+                create: (_) => ProfileProvider(),
               ),
             ],
             child: const App(),

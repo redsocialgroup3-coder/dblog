@@ -21,6 +21,7 @@ class User(TimestampMixin, Base):
     floor_door: Mapped[Optional[str]] = mapped_column(String(50))
     municipality: Mapped[Optional[str]] = mapped_column(String(255))
     calibration_offset: Mapped[float] = mapped_column(Float, default=0.0)
+    db_threshold: Mapped[float] = mapped_column(Float, default=65.0)
     is_subscriber: Mapped[bool] = mapped_column(Boolean, default=False)
 
     recordings: Mapped[List["Recording"]] = relationship(
