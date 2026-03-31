@@ -15,8 +15,14 @@ class PaymentService {
   /// Entitlement ID que otorga acceso ilimitado a PDFs.
   static const String entitlementId = 'pdf_unlimited';
 
+  /// Entitlement ID que otorga acceso a todas las funciones Pro.
+  static const String proEntitlementId = 'pro';
+
   /// Product ID del consumible para comprar un PDF individual.
   static const String consumableProductId = 'dblog_pdf_single';
+
+  /// Product ID de la suscripción mensual Pro.
+  static const String subscriptionProductId = 'dblog_pro_monthly';
 
   bool _initialized = false;
 
@@ -105,4 +111,78 @@ class PaymentService {
       rethrow;
     }
   }
+
+  /// Compra la suscripción mensual Pro.
+  /// Retorna true si la compra fue exitosa.
+  Future<bool> purchaseSubscription(StoreProduct product) async {
+    try {
+      await Purchases.purchaseStoreProduct(product);
+      log('Suscripción comprada: ${product.identifier}');
+      return true;
+    } on PlatformException catch (e) {
+      final errorCode = PurchasesErrorHelper.getErrorCode(e);
+      if (errorCode == PurchasesErrorCode.purchaseCancelledError) {
+        log('Suscripción cancelada por el usuario');
+        return false;
+      }
+      log('Error en compra de suscripción: $e');
+      rethrow;
+    }
+  }
+
+  /// Obtiene la información de suscripción del usuario actual.
+  /// Retorna un mapa con estado, fecha de expiración, etc.
+  Future<SubscriptionInfo> getSubscriptionInfo() async {
+    try {
+      final customerInfo = await Purchases.getCustomerInfo();
+      final proEntitlement = customerInfo.entitlements.all[proEntitlementId];
+      final pdfEntitlement = customerInfo.entitlements.all[entitlementId];
+
+      // Considerar activo si tiene pro o pdf_unlimited.
+      final isActive =
+          (proEntitlement?.isActive ?? false) ||
+          (pdfEntitlement?.isActive ?? false);
+
+      DateTime? expirationDate;
+      final expirationStr =
+          proEntitlement?.expirationDate ?? pdfEntitlement?.expirationDate;
+      if (expirationStr != null) {
+        expirationDate = DateTime.tryParse(expirationStr);
+      }
+
+      return SubscriptionInfo(
+        isActive: isActive,
+        expirationDate: expirationDate,
+        willRenew: proEntitlement?.willRenew ?? pdfEntitlement?.willRenew ?? false,
+      );
+    } catch (e) {
+      log('Error obteniendo info de suscripción: $e');
+      return SubscriptionInfo(isActive: false);
+    }
+  }
+
+  /// Obtiene la URL de gestión de suscripciones de la store.
+  /// Retorna null si no hay URL disponible.
+  Future<String?> getManagementUrl() async {
+    try {
+      final customerInfo = await Purchases.getCustomerInfo();
+      return customerInfo.managementURL;
+    } catch (e) {
+      log('Error obteniendo URL de gestión: $e');
+      return null;
+    }
+  }
+}
+
+/// Información de la suscripción del usuario.
+class SubscriptionInfo {
+  final bool isActive;
+  final DateTime? expirationDate;
+  final bool willRenew;
+
+  SubscriptionInfo({
+    required this.isActive,
+    this.expirationDate,
+    this.willRenew = false,
+  });
 }

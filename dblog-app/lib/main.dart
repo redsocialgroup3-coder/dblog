@@ -48,9 +48,6 @@ void main() async {
                     RecordingProvider(meterProvider: meterProvider),
               ),
               ChangeNotifierProvider(
-                create: (_) => HistoryProvider(),
-              ),
-              ChangeNotifierProvider(
                 create: (_) => OnboardingProvider(),
               ),
               ChangeNotifierProvider(
@@ -70,6 +67,13 @@ void main() async {
               ),
               ChangeNotifierProvider(
                 create: (_) => PaymentProvider(),
+              ),
+              ChangeNotifierProxyProvider<PaymentProvider, HistoryProvider>(
+                create: (_) => HistoryProvider(),
+                update: (_, paymentProvider, historyProvider) {
+                  historyProvider!.setPaymentProvider(paymentProvider);
+                  return historyProvider;
+                },
               ),
             ],
             child: const App(),

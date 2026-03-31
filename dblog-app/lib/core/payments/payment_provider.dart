@@ -3,6 +3,7 @@ import 'dart:developer';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'payment_service.dart';
 
@@ -16,6 +17,8 @@ class PaymentProvider extends ChangeNotifier {
   bool _isProcessingPurchase = false;
   String? _error;
   Offerings? _offerings;
+  DateTime? _subscriptionExpirationDate;
+  bool _subscriptionWillRenew = false;
 
   /// Si el usuario tiene suscripción activa (PDFs ilimitados).
   bool get isSubscriber => _isSubscriber;
@@ -32,6 +35,12 @@ class PaymentProvider extends ChangeNotifier {
   /// Productos/ofertas disponibles en RevenueCat.
   Offerings? get offerings => _offerings;
 
+  /// Fecha de expiración/renovación de la suscripción.
+  DateTime? get subscriptionExpirationDate => _subscriptionExpirationDate;
+
+  /// Si la suscripción se renovará automáticamente.
+  bool get subscriptionWillRenew => _subscriptionWillRenew;
+
   /// True si el usuario puede generar un PDF (suscriptor o compra individual).
   bool get canGeneratePdf => _isSubscriber || _hasPurchasedPdf;
 
@@ -39,6 +48,11 @@ class PaymentProvider extends ChangeNotifier {
   Future<void> checkEntitlements() async {
     try {
       _isSubscriber = await _paymentService.checkSubscription();
+      // También cargar info de suscripción.
+      final info = await _paymentService.getSubscriptionInfo();
+      _subscriptionExpirationDate = info.expirationDate;
+      _subscriptionWillRenew = info.willRenew;
+      if (info.isActive) _isSubscriber = true;
       notifyListeners();
     } catch (e) {
       log('Error verificando entitlements: $e');
@@ -110,6 +124,57 @@ class PaymentProvider extends ChangeNotifier {
     }
   }
 
+  /// Compra la suscripción mensual Pro.
+  /// Retorna true si la compra fue exitosa.
+  Future<bool> purchaseSubscription() async {
+    _isProcessingPurchase = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      // Obtener el producto de suscripción del offering actual.
+      final offering = _offerings?.current;
+      if (offering == null) {
+        _error = 'No hay productos disponibles';
+        return false;
+      }
+
+      // Buscar el paquete de suscripción mensual.
+      final package = offering.availablePackages.firstWhere(
+        (pkg) =>
+            pkg.storeProduct.identifier ==
+            PaymentService.subscriptionProductId,
+        orElse: () => offering.availablePackages.first,
+      );
+
+      final success =
+          await _paymentService.purchaseSubscription(package.storeProduct);
+
+      if (success) {
+        _isSubscriber = true;
+        // Actualizar info de suscripción tras la compra.
+        final info = await _paymentService.getSubscriptionInfo();
+        _subscriptionExpirationDate = info.expirationDate;
+        _subscriptionWillRenew = info.willRenew;
+        return true;
+      }
+
+      _error = 'Compra cancelada';
+      return false;
+    } on PlatformException catch (e) {
+      log('Error en compra de suscripción: $e');
+      _error = 'Error al procesar el pago';
+      return false;
+    } catch (e) {
+      log('Error inesperado en suscripción: $e');
+      _error = 'Error inesperado al procesar el pago';
+      return false;
+    } finally {
+      _isProcessingPurchase = false;
+      notifyListeners();
+    }
+  }
+
   /// Restaura compras anteriores.
   Future<void> restorePurchases() async {
     _isProcessingPurchase = true;
@@ -121,12 +186,33 @@ class PaymentProvider extends ChangeNotifier {
       _isSubscriber =
           customerInfo.entitlements.all[PaymentService.entitlementId]?.isActive ??
               false;
+      // Verificar también el entitlement pro.
+      if (customerInfo.entitlements.all[PaymentService.proEntitlementId]?.isActive ??
+          false) {
+        _isSubscriber = true;
+      }
+      // Actualizar info de suscripción.
+      final info = await _paymentService.getSubscriptionInfo();
+      _subscriptionExpirationDate = info.expirationDate;
+      _subscriptionWillRenew = info.willRenew;
     } catch (e) {
       log('Error restaurando compras: $e');
       _error = 'No se pudieron restaurar las compras';
     } finally {
       _isProcessingPurchase = false;
       notifyListeners();
+    }
+  }
+
+  /// Abre la URL de gestión de suscripciones de la store.
+  Future<void> openManagementUrl() async {
+    try {
+      final url = await _paymentService.getManagementUrl();
+      if (url != null) {
+        await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+      }
+    } catch (e) {
+      log('Error abriendo gestión de suscripciones: $e');
     }
   }
 
