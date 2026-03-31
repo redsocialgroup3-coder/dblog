@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../history/widgets/history_screen.dart';
 import '../../recording/providers/recording_provider.dart';
 import '../../recording/widgets/recording_overlay.dart';
 import '../models/db_reading.dart';
@@ -21,6 +22,17 @@ class MeterScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('dBLog'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.history),
+            tooltip: 'Historial',
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const HistoryScreen(),
+                ),
+              );
+            },
+          ),
           Consumer<MeterProvider>(
             builder: (context, provider, _) {
               return IconButton(
