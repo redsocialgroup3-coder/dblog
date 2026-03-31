@@ -23,3 +23,7 @@
 - WeasyPrint + Jinja2 para generar PDFs desde templates HTML
 - matplotlib para gráficas embebidas en PDF como base64
 - python-multipart necesario para UploadFile en endpoints
+- cryptography (Fernet) para cifrado AES de archivos en R2
+- Dockerfile multi-stage con python:3.11-slim + deps de weasyprint
+- Nginx como reverse proxy con Certbot para SSL
+- pytest + conftest con SQLite en memoria para tests API
