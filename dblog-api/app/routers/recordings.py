@@ -1,3 +1,4 @@
+import io
 import logging
 import uuid
 from datetime import datetime
@@ -11,6 +12,7 @@ from app.dependencies import get_current_user
 from app.models.recording import Recording
 from app.models.user import User
 from app.schemas.recording import RecordingResponse
+from app.services.encryption_service import encryption_service
 from app.services.storage_service import storage_service
 
 logger = logging.getLogger(__name__)
@@ -36,8 +38,17 @@ async def upload_recording(
     recording_id = uuid.UUID(local_id) if local_id else uuid.uuid4()
     key = f"{current_user.id}/{recording_id}/{file_name}"
 
-    # Subir archivo a R2.
-    url = storage_service.upload_file(file.file, key, content_type=file.content_type or "audio/mp4")
+    # Cifrar archivo antes de subir a R2.
+    file_bytes = await file.read()
+    if current_user.encryption_key:
+        user_key = encryption_service.decrypt_user_key(current_user.encryption_key)
+        encrypted_bytes = encryption_service.encrypt_file(file_bytes, user_key)
+    else:
+        encrypted_bytes = file_bytes
+
+    url = storage_service.upload_file(
+        io.BytesIO(encrypted_bytes), key, content_type="application/octet-stream"
+    )
 
     # Crear registro en DB.
     recording = Recording(
@@ -98,7 +109,7 @@ async def download_recording(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Genera una URL presigned para descargar el audio."""
+    """Descarga y descifra el audio, retorna URL presigned o bytes descifrados."""
     recording = (
         db.query(Recording)
         .filter(Recording.id == recording_id, Recording.user_id == current_user.id)
@@ -106,6 +117,28 @@ async def download_recording(
     )
     if not recording:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Grabación no encontrada")
+
+    # Si el usuario tiene clave de cifrado, descifrar el archivo.
+    if current_user.encryption_key:
+        import httpx
+        from fastapi.responses import Response
+
+        presigned_url = storage_service.download_url(recording.file_path, expires_in=300)
+        resp = httpx.get(presigned_url, timeout=60)
+        resp.raise_for_status()
+
+        user_key = encryption_service.decrypt_user_key(current_user.encryption_key)
+        try:
+            decrypted = encryption_service.decrypt_file(resp.content, user_key)
+        except Exception:
+            # Archivo no cifrado (legacy), retornar tal cual.
+            decrypted = resp.content
+
+        return Response(
+            content=decrypted,
+            media_type="audio/mp4",
+            headers={"Content-Disposition": f'attachment; filename="{recording.file_name}"'},
+        )
 
     url = storage_service.download_url(recording.file_path)
     return {"download_url": url}

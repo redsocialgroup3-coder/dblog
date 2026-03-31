@@ -4,8 +4,10 @@ import 'package:flutter/widgets.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
 
+import '../../../core/encryption/encryption_service.dart';
+
 /// Servicio que encapsula la grabación de audio en formato AAC/M4A.
-/// Almacena los archivos en el directorio de documentos de la app.
+/// Almacena los archivos cifrados en el directorio de documentos de la app.
 class RecordingService {
   final AudioRecorder _recorder = AudioRecorder();
 
@@ -41,13 +43,28 @@ class RecordingService {
     return filePath;
   }
 
-  /// Detiene la grabación y retorna la ruta del archivo.
+  /// Detiene la grabación, cifra el archivo y retorna la ruta del archivo cifrado.
   Future<String?> stopRecording() async {
     if (!_isRecording) return null;
 
     final path = await _recorder.stop();
     _isRecording = false;
     _currentFilePath = null;
+
+    // Cifrar el archivo de audio localmente.
+    if (path != null) {
+      try {
+        final originalFile = File(path);
+        final encryptedFile =
+            await LocalEncryptionService.instance.encryptFile(originalFile);
+        // Eliminar el archivo original sin cifrar.
+        await originalFile.delete();
+        return encryptedFile.path;
+      } catch (e) {
+        debugPrint('Error cifrando audio: $e - retornando sin cifrar');
+        return path;
+      }
+    }
 
     return path;
   }
