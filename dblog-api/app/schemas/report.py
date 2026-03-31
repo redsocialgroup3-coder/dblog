@@ -24,6 +24,10 @@ class ReportRequest(BaseModel):
     reporter_name: Optional[str] = Field(
         None, description="Nombre del denunciante (opcional)"
     )
+    purchase_token: Optional[str] = Field(
+        None,
+        description="Token de compra RevenueCat (verificación server-side en v2)",
+    )
 
 
 class ReportResponse(BaseModel):

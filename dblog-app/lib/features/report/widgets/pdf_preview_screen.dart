@@ -3,13 +3,14 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../core/payments/payment_provider.dart';
 import '../../../shared/theme/app_theme.dart';
 import '../models/report_request.dart';
 import '../providers/report_provider.dart';
 
 /// Pantalla de vista previa del PDF generado con marca de agua PREVIEW.
-/// Permite compartir la vista previa y muestra un botón de compra
-/// (deshabilitado hasta integrar RevenueCat en issue #15).
+/// Permite compartir la vista previa, comprar el informe individual vía
+/// RevenueCat o generarlo directamente si el usuario es suscriptor.
 class PdfPreviewScreen extends StatelessWidget {
   /// Ruta al archivo PDF de vista previa.
   final String pdfPath;
@@ -23,10 +24,60 @@ class PdfPreviewScreen extends StatelessWidget {
     required this.reportRequest,
   });
 
+  /// Ejecuta la compra del PDF y, si es exitosa, genera el PDF final.
+  Future<void> _handlePurchaseAndGenerate(BuildContext context) async {
+    final paymentProvider = context.read<PaymentProvider>();
+    final reportProvider = context.read<ReportProvider>();
+
+    final success = await paymentProvider.purchasePdfReport();
+
+    if (!context.mounted) return;
+
+    if (!success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(paymentProvider.error ?? 'No se pudo completar la compra'),
+          backgroundColor: AppTheme.danger,
+        ),
+      );
+      return;
+    }
+
+    // Compra exitosa: generar PDF final sin marca de agua.
+    await reportProvider.generateFinal(reportRequest);
+
+    if (!context.mounted) return;
+
+    if (reportProvider.error != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(reportProvider.error!),
+          backgroundColor: AppTheme.danger,
+        ),
+      );
+      return;
+    }
+
+    if (reportProvider.finalPdfPath != null) {
+      // Resetear estado de compra individual tras generar.
+      paymentProvider.resetPurchase();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Informe generado correctamente'),
+          backgroundColor: AppTheme.success,
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final reportProvider = context.watch<ReportProvider>();
+    final paymentProvider = context.watch<PaymentProvider>();
     final fileExists = File(pdfPath).existsSync();
+    final isProcessing =
+        paymentProvider.isProcessingPurchase || reportProvider.isGenerating;
 
     return Scaffold(
       appBar: AppBar(
@@ -105,18 +156,31 @@ class PdfPreviewScreen extends StatelessWidget {
               ),
               child: Column(
                 children: [
-                  // Comprar informe (deshabilitado — RevenueCat en issue #15).
+                  // Comprar informe o generar directamente si es suscriptor.
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton.icon(
-                      onPressed: null,
-                      icon: const Icon(Icons.shopping_cart_outlined),
-                      label: const Text('Comprar informe (4.99€) — Próximamente'),
-                      style: ElevatedButton.styleFrom(
-                        disabledBackgroundColor:
-                            AppTheme.surfaceLight.withValues(alpha: 0.5),
-                        disabledForegroundColor:
-                            AppTheme.textSecondary.withValues(alpha: 0.5),
+                      onPressed: isProcessing
+                          ? null
+                          : () => _handlePurchaseAndGenerate(context),
+                      icon: isProcessing
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: AppTheme.textSecondary,
+                              ),
+                            )
+                          : Icon(
+                              paymentProvider.isSubscriber
+                                  ? Icons.picture_as_pdf_rounded
+                                  : Icons.shopping_cart_outlined,
+                            ),
+                      label: Text(
+                        paymentProvider.isSubscriber
+                            ? 'Generar informe'
+                            : 'Comprar informe (4.99\u20AC)',
                       ),
                     ),
                   ),

@@ -7,6 +7,8 @@ import 'package:provider/provider.dart';
 import 'app.dart';
 import 'core/auth/auth_provider.dart';
 import 'core/legal/legal_provider.dart';
+import 'core/payments/payment_provider.dart';
+import 'core/payments/payment_service.dart';
 import 'core/sync/sync_provider.dart';
 import 'features/history/providers/history_provider.dart';
 import 'features/meter/providers/meter_provider.dart';
@@ -25,6 +27,13 @@ void main() async {
     await Firebase.initializeApp();
   } catch (e) {
     log('Firebase no pudo inicializarse: $e');
+  }
+
+  // Inicializar RevenueCat.
+  try {
+    await PaymentService.instance.initialize();
+  } catch (e) {
+    log('RevenueCat no pudo inicializarse: $e');
   }
 
   runApp(
@@ -58,6 +67,9 @@ void main() async {
               ),
               ChangeNotifierProvider(
                 create: (_) => ReportProvider(),
+              ),
+              ChangeNotifierProvider(
+                create: (_) => PaymentProvider(),
               ),
             ],
             child: const App(),
