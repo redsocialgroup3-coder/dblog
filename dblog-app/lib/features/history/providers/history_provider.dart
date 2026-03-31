@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/widgets.dart';
 import 'package:path_provider/path_provider.dart';
 
+import '../../../core/sync/sync_service.dart';
 import '../../recording/models/recording.dart';
 
 /// Provider que gestiona el historial de grabaciones.
@@ -73,6 +74,19 @@ class HistoryProvider extends ChangeNotifier {
         } catch (e) {
           debugPrint('HistoryProvider: error leyendo ${file.path}: $e');
         }
+      }
+
+      // Intentar mergear con grabaciones remotas.
+      try {
+        final remoteRecordings = await SyncService.instance.downloadRecordings();
+        final localIds = loaded.map((r) => r.id).toSet();
+        for (final remote in remoteRecordings) {
+          if (!localIds.contains(remote.id)) {
+            loaded.add(remote);
+          }
+        }
+      } catch (e) {
+        debugPrint('HistoryProvider: no se pudo cargar remotas: $e');
       }
 
       // Ordenar por fecha descendente (más reciente primero).

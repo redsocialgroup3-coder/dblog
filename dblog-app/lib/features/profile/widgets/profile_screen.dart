@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/auth/auth_provider.dart';
+import '../../../core/sync/sync_provider.dart';
 import '../../../shared/theme/app_theme.dart';
 import '../../auth/widgets/login_screen.dart';
 import '../providers/profile_provider.dart';
@@ -229,6 +230,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                   const SizedBox(height: 32),
 
+                  // Seccion: Sincronizacion.
+                  _buildSyncSection(),
+
+                  const SizedBox(height: 32),
+
                   // Seccion: Cuenta.
                   _buildSectionTitle('Cuenta'),
                   const SizedBox(height: 12),
@@ -266,6 +272,127 @@ class _ProfileScreenState extends State<ProfileScreen> {
           );
         },
       ),
+    );
+  }
+
+  Widget _buildSyncSection() {
+    return Consumer<SyncProvider>(
+      builder: (context, syncProvider, _) {
+        final lastSync = syncProvider.lastSyncTime;
+        final lastSyncText = lastSync != null
+            ? '${lastSync.day}/${lastSync.month}/${lastSync.year} ${lastSync.hour}:${lastSync.minute.toString().padLeft(2, '0')}'
+            : 'Nunca';
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildSectionTitle('Sincronizacion'),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppTheme.surface,
+                borderRadius: BorderRadius.circular(AppTheme.borderRadiusMd),
+                border: Border.all(color: AppTheme.surfaceLight),
+              ),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        syncProvider.isOnline
+                            ? Icons.cloud_done_outlined
+                            : Icons.cloud_off_outlined,
+                        color: syncProvider.isOnline
+                            ? AppTheme.accent
+                            : AppTheme.textSecondary,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              syncProvider.isOnline ? 'Conectado' : 'Sin conexion',
+                              style: const TextStyle(
+                                color: AppTheme.textPrimary,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Ultima sync: $lastSyncText',
+                              style: const TextStyle(
+                                color: AppTheme.textSecondary,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (syncProvider.pendingUploads > 0)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: AppTheme.warning.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            '${syncProvider.pendingUploads} pendientes',
+                            style: const TextStyle(
+                              color: AppTheme.warning,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: syncProvider.isSyncing
+                          ? null
+                          : () => syncProvider.syncAll(),
+                      icon: syncProvider.isSyncing
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.sync),
+                      label: Text(
+                        syncProvider.isSyncing
+                            ? 'Sincronizando...'
+                            : 'Sincronizar ahora',
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppTheme.accent,
+                        side: const BorderSide(color: AppTheme.accent),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                    ),
+                  ),
+                  if (syncProvider.errorMessage != null) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      syncProvider.errorMessage!,
+                      style: const TextStyle(
+                        color: AppTheme.danger,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 

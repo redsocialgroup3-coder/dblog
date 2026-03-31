@@ -5,6 +5,7 @@ import 'dart:math' as math;
 import 'package:flutter/widgets.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../../core/sync/sync_provider.dart';
 import '../../meter/providers/meter_provider.dart';
 import '../models/recording.dart';
 import '../services/location_service.dart';
@@ -29,6 +30,7 @@ class RecordingProvider extends ChangeNotifier {
   final RecordingService _recordingService;
   final LocationService _locationService;
   final MeterProvider _meterProvider;
+  final SyncProvider? _syncProvider;
 
   /// Duración máxima en tier gratuito (segundos).
   static const int maxDurationFree = 60;
@@ -71,9 +73,11 @@ class RecordingProvider extends ChangeNotifier {
     required MeterProvider meterProvider,
     RecordingService? recordingService,
     LocationService? locationService,
+    SyncProvider? syncProvider,
   })  : _meterProvider = meterProvider,
         _recordingService = recordingService ?? RecordingService(),
-        _locationService = locationService ?? LocationService();
+        _locationService = locationService ?? LocationService(),
+        _syncProvider = syncProvider;
 
   /// Indica si se está grabando.
   bool get isRecording => _state == RecordingState.recording;
@@ -175,6 +179,14 @@ class RecordingProvider extends ChangeNotifier {
 
       // Guardar metadatos en JSON.
       await _saveMetadata(recording);
+
+      // Agregar a cola de sync y sincronizar si hay conexión.
+      if (_syncProvider != null) {
+        await _syncProvider.addToPendingQueue(recording.id);
+        if (_syncProvider.isOnline) {
+          _syncProvider.syncAll();
+        }
+      }
 
       _lastRecording = recording;
       _state = RecordingState.idle;

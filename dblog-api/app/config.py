@@ -11,6 +11,10 @@ class Settings(BaseSettings):
     APP_NAME: str = "dBLog API"
     DEBUG: bool = False
     FIREBASE_PROJECT_ID: str = "your-project-id"
+    R2_ENDPOINT: str = ""
+    R2_ACCESS_KEY_ID: str = ""
+    R2_SECRET_ACCESS_KEY: str = ""
+    R2_BUCKET_NAME: str = "dblog-recordings"
 
 
 settings = Settings()
