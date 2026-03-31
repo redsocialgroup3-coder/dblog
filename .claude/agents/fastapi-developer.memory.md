@@ -1,10 +1,20 @@
 # FastAPI Developer Memory — dBLog
 
 ## Aprendizajes
-_Sin entradas aún._
+- [2026-03-31] SQLAlchemy 2.0 con mapped_column, Mapped, DeclarativeBase
+- [2026-03-31] TimestampMixin en base.py con id UUID, created_at, updated_at
+- [2026-03-31] firebase-admin==6.6.0 para verificar tokens, inicializar sin service account JSON
+- [2026-03-31] Dependency get_current_user hace upsert por firebase_uid
+- [2026-03-31] Pydantic Settings para config, lee DATABASE_URL del .env
 
 ## Patrones del proyecto
-_Sin entradas aún._
+- Estructura: routers/, models/, schemas/, services/, dependencies.py
+- Modelos: User, Recording, NoiseRegulation con TimestampMixin
+- Schemas: Create, Update, Response por cada modelo
+- Routers: health, auth, users
+- Docker Compose con PostgreSQL 16 Alpine
 
 ## Errores a evitar
-_Sin entradas aún._
+- Siempre incluir nuevos routers en main.py
+- No hardcodear credenciales, usar .env.example como referencia
+- Agregar nuevas dependencias a requirements.txt

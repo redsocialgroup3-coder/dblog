@@ -18,6 +18,9 @@
 - [2026-03-31] Gauge circular con CustomPainter para display de dB prominente
 - [2026-03-31] Línea de referencia legal en gráfica fl_chart (ExtraLinesData horizontal)
 - [2026-03-31] Verdict screen con 3 estados: SUPERA (rojo), CERCANO (amarillo), NO SUPERA (verde)
+- [2026-03-31] firebase_core, firebase_auth, google_sign_in para auth
+- [2026-03-31] ApiService con http package para comunicación con backend, auth token automático
+- [2026-03-31] ProfileProvider con fallback local (shared_preferences) si no hay conexión
 
 ## Patrones del proyecto
 - Archivos en snake_case, clases en PascalCase
