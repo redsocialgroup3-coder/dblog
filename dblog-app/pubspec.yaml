@@ -48,6 +48,7 @@ dependencies:
   google_sign_in: ^6.2.2
   connectivity_plus: ^6.1.0
   share_plus: ^10.1.4
+  purchases_flutter: ^8.0.0
 
 dev_dependencies:
   flutter_test:

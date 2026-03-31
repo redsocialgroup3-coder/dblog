@@ -7,6 +7,7 @@ import 'package:share_plus/share_plus.dart';
 
 import '../../../core/api/api_service.dart';
 import '../../../core/auth/auth_service.dart';
+import '../../../core/payments/payment_provider.dart';
 import '../models/report_request.dart';
 
 /// ChangeNotifier que gestiona la generación y compartición de informes PDF.
@@ -51,7 +52,18 @@ class ReportProvider extends ChangeNotifier {
   }
 
   /// Genera el PDF final sin marca de agua (requiere pago).
-  Future<void> generateFinal(ReportRequest request) async {
+  /// Recibe opcionalmente un [PaymentProvider] para verificar entitlement.
+  Future<void> generateFinal(
+    ReportRequest request, {
+    PaymentProvider? paymentProvider,
+  }) async {
+    // Verificar que el usuario tiene derecho a generar el PDF.
+    if (paymentProvider != null && !paymentProvider.canGeneratePdf) {
+      _error = 'Debes comprar el informe o ser suscriptor para generarlo';
+      notifyListeners();
+      return;
+    }
+
     _isGenerating = true;
     _error = null;
     _finalPdfPath = null;
