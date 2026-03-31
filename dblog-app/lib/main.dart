@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'app.dart';
 import 'features/history/providers/history_provider.dart';
 import 'features/meter/providers/meter_provider.dart';
+import 'features/onboarding/providers/onboarding_provider.dart';
 import 'features/recording/providers/recording_provider.dart';
 
 void main() {
@@ -21,6 +22,9 @@ void main() {
               ),
               ChangeNotifierProvider(
                 create: (_) => HistoryProvider(),
+              ),
+              ChangeNotifierProvider(
+                create: (_) => OnboardingProvider(),
               ),
             ],
             child: const App(),
