@@ -9,6 +9,7 @@ import 'package:uuid/uuid.dart';
 import '../../../core/audio/noise_meter_service.dart';
 import '../../../core/calibration/calibration_service.dart';
 import '../../../core/constants/audio_constants.dart';
+import '../../../core/notifications/notification_service.dart';
 import '../../recording/services/recording_service.dart';
 import '../models/surveillance_event.dart';
 
@@ -46,6 +47,7 @@ class SurveillanceService {
   final NoiseMeterService _noiseMeterService;
   final RecordingService _recordingService;
   final CalibrationService _calibrationService;
+  final NotificationService _notificationService;
 
   StreamSubscription<NoiseReading>? _noiseSubscription;
 
@@ -114,9 +116,12 @@ class SurveillanceService {
     NoiseMeterService? noiseMeterService,
     RecordingService? recordingService,
     CalibrationService? calibrationService,
+    NotificationService? notificationService,
   })  : _noiseMeterService = noiseMeterService ?? NoiseMeterService(),
         _recordingService = recordingService ?? RecordingService(),
-        _calibrationService = calibrationService ?? CalibrationService();
+        _calibrationService = calibrationService ?? CalibrationService(),
+        _notificationService =
+            notificationService ?? NotificationService.instance;
 
   /// Inicia la vigilancia con el umbral dado.
   Future<void> start({required double threshold}) async {
@@ -294,6 +299,9 @@ class SurveillanceService {
       );
 
       _events.add(event);
+
+      // Enviar notificación local del evento detectado.
+      _notificationService.showNoiseEventNotification(event);
     } catch (e) {
       debugPrint('SurveillanceService: error deteniendo grabación: $e');
     }

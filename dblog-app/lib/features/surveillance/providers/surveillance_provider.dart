@@ -4,6 +4,7 @@ import 'package:flutter/widgets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../core/legal/legal_provider.dart';
+import '../../../core/notifications/notification_service.dart';
 import '../../../core/payments/payment_provider.dart';
 import '../models/surveillance_event.dart';
 import '../services/surveillance_service.dart';
@@ -20,6 +21,7 @@ class SurveillanceProvider extends ChangeNotifier {
   final SurveillanceService _service;
   final PaymentProvider _paymentProvider;
   final LegalProvider _legalProvider;
+  final NotificationService _notificationService;
 
   /// Si la vigilancia está activa.
   bool get isActive => _service.state != SurveillanceState.idle;
@@ -50,15 +52,28 @@ class SurveillanceProvider extends ChangeNotifier {
   /// Timer para actualizar la duración cada segundo.
   Timer? _durationTimer;
 
+  /// Callback para navegar al detalle de una grabación desde notificación.
+  /// Recibe el payload JSON con eventId y recordingId.
+  void Function(String? payload)? onNotificationNavigation;
+
   SurveillanceProvider({
     required PaymentProvider paymentProvider,
     required LegalProvider legalProvider,
     SurveillanceService? service,
+    NotificationService? notificationService,
   })  : _paymentProvider = paymentProvider,
         _legalProvider = legalProvider,
+        _notificationService =
+            notificationService ?? NotificationService.instance,
         _service = service ?? SurveillanceService() {
     _service.onStateChanged = _onServiceStateChanged;
+    _notificationService.onNotificationTapped = _onNotificationTapped;
     _loadThreshold();
+  }
+
+  /// Maneja el tap en una notificación de evento de ruido.
+  void _onNotificationTapped(String? payload) {
+    onNotificationNavigation?.call(payload);
   }
 
   /// Callback cuando el servicio cambia de estado.
