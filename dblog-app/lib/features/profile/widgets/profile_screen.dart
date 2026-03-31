@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/auth/auth_provider.dart';
+import '../../../core/payments/payment_provider.dart';
 import '../../../core/sync/sync_provider.dart';
 import '../../../shared/theme/app_theme.dart';
 import '../../auth/widgets/login_screen.dart';
+import '../../subscription/widgets/subscription_screen.dart';
 import '../providers/profile_provider.dart';
 
 /// Pantalla de perfil y ajustes del usuario.
@@ -235,6 +237,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                   const SizedBox(height: 32),
 
+                  // Seccion: Suscripcion.
+                  _buildSubscriptionSection(),
+
+                  const SizedBox(height: 32),
+
                   // Seccion: Cuenta.
                   _buildSectionTitle('Cuenta'),
                   const SizedBox(height: 12),
@@ -387,6 +394,124 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                     ),
                   ],
+                ],
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildSubscriptionSection() {
+    return Consumer<PaymentProvider>(
+      builder: (context, paymentProvider, _) {
+        final isSubscriber = paymentProvider.isSubscriber;
+        final expirationDate = paymentProvider.subscriptionExpirationDate;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildSectionTitle('Suscripción'),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppTheme.surface,
+                borderRadius: BorderRadius.circular(AppTheme.borderRadiusMd),
+                border: Border.all(color: AppTheme.surfaceLight),
+              ),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        isSubscriber ? Icons.star_rounded : Icons.star_outline_rounded,
+                        color: isSubscriber ? AppTheme.accent : AppTheme.textSecondary,
+                        size: 22,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              isSubscriber ? 'Plan Pro' : 'Plan Free',
+                              style: TextStyle(
+                                color: AppTheme.textPrimary,
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            if (isSubscriber && expirationDate != null)
+                              Text(
+                                'Renovación: ${expirationDate.day}/${expirationDate.month}/${expirationDate.year}',
+                                style: const TextStyle(
+                                  color: AppTheme.textSecondary,
+                                  fontSize: 12,
+                                ),
+                              )
+                            else if (!isSubscriber)
+                              const Text(
+                                'Historial limitado a 5 grabaciones',
+                                style: TextStyle(
+                                  color: AppTheme.textSecondary,
+                                  fontSize: 12,
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: isSubscriber
+                              ? AppTheme.accent.withValues(alpha: 0.15)
+                              : AppTheme.surfaceLight,
+                          borderRadius: BorderRadius.circular(AppTheme.borderRadiusSm),
+                        ),
+                        child: Text(
+                          isSubscriber ? 'PRO' : 'FREE',
+                          style: TextStyle(
+                            color: isSubscriber ? AppTheme.accent : AppTheme.textSecondary,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.8,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  SizedBox(
+                    width: double.infinity,
+                    child: isSubscriber
+                        ? OutlinedButton.icon(
+                            onPressed: () => paymentProvider.openManagementUrl(),
+                            icon: const Icon(Icons.settings_outlined, size: 18),
+                            label: const Text('Gestionar suscripción'),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: AppTheme.accent,
+                              side: const BorderSide(color: AppTheme.accent),
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                          )
+                        : ElevatedButton.icon(
+                            onPressed: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => const SubscriptionScreen(),
+                                ),
+                              );
+                            },
+                            icon: const Icon(Icons.star_rounded, size: 18),
+                            label: const Text('Ver planes'),
+                            style: ElevatedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                          ),
+                  ),
                 ],
               ),
             ),

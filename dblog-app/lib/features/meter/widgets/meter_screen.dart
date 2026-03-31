@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/legal/legal_provider.dart';
+import '../../../core/payments/payment_provider.dart';
 import '../../../shared/theme/app_theme.dart';
 import '../../history/widgets/history_screen.dart';
 import '../../profile/widgets/profile_screen.dart';
 import '../../recording/providers/recording_provider.dart';
 import '../../recording/widgets/recording_overlay.dart';
 import '../../recording/widgets/verdict_screen.dart';
+import '../../subscription/widgets/subscription_screen.dart';
 import '../models/db_reading.dart';
 import '../providers/meter_provider.dart';
 import 'calibration_dialog.dart';
@@ -92,6 +94,8 @@ class _MeterScreenState extends State<MeterScreen> {
                 const RecordingOverlay(),
                 // Disclaimer de medición orientativa.
                 const _DisclaimerBanner(),
+                // Banner de upgrade para usuarios free.
+                const _UpgradeBanner(),
                 const SizedBox(height: 16),
                 // Gauge de dB.
                 DbDisplay(db: provider.currentDb),
@@ -561,6 +565,62 @@ class _DisclaimerBanner extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _UpgradeBanner extends StatelessWidget {
+  const _UpgradeBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<PaymentProvider>(
+      builder: (context, paymentProvider, _) {
+        // No mostrar banner si ya es suscriptor.
+        if (paymentProvider.isSubscriber) return const SizedBox.shrink();
+
+        return GestureDetector(
+          onTap: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => const SubscriptionScreen(),
+              ),
+            );
+          },
+          child: Container(
+            width: double.infinity,
+            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  AppTheme.accent.withValues(alpha: 0.1),
+                  AppTheme.accent.withValues(alpha: 0.05),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(AppTheme.borderRadiusSm),
+              border: Border.all(
+                color: AppTheme.accent.withValues(alpha: 0.2),
+                width: 1,
+              ),
+            ),
+            child: const Row(
+              children: [
+                Icon(Icons.star_rounded, size: 14, color: AppTheme.accent),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Desbloquea todas las funciones — Ver planes',
+                    style: TextStyle(fontSize: 11, color: AppTheme.accent),
+                  ),
+                ),
+                Icon(Icons.chevron_right_rounded,
+                    size: 16, color: AppTheme.accent),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

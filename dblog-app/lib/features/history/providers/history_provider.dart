@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/widgets.dart';
 import 'package:path_provider/path_provider.dart';
 
+import '../../../core/payments/payment_provider.dart';
 import '../../../core/sync/sync_service.dart';
 import '../../recording/models/recording.dart';
 
@@ -11,6 +12,13 @@ import '../../recording/models/recording.dart';
 /// Carga las grabaciones del filesystem leyendo los JSON de metadatos,
 /// las ordena por fecha descendente y limita a 5 en tier gratuito.
 class HistoryProvider extends ChangeNotifier {
+  PaymentProvider? _paymentProvider;
+
+  /// Vincula el PaymentProvider para consultar el estado de suscripción.
+  void setPaymentProvider(PaymentProvider provider) {
+    _paymentProvider = provider;
+  }
+
   List<Recording> _recordings = [];
 
   /// Todas las grabaciones disponibles (ya ordenadas por fecha descendente).
@@ -19,7 +27,7 @@ class HistoryProvider extends ChangeNotifier {
   /// Grabaciones visibles según el tier del usuario.
   /// Tier gratuito: últimas 5. Suscripción: todas.
   List<Recording> get visibleRecordings {
-    if (_isSubscribed) return _recordings;
+    if (isSubscribed) return _recordings;
     return _recordings.take(5).toList();
   }
 
@@ -28,7 +36,7 @@ class HistoryProvider extends ChangeNotifier {
 
   /// Indica si hay grabaciones ocultas por límite del tier gratuito.
   int get hiddenCount {
-    if (_isSubscribed) return 0;
+    if (isSubscribed) return 0;
     return (_recordings.length > 5) ? _recordings.length - 5 : 0;
   }
 
@@ -38,9 +46,8 @@ class HistoryProvider extends ChangeNotifier {
   String? _errorMessage;
   String? get errorMessage => _errorMessage;
 
-  // TODO: integrar con RevenueCat cuando esté disponible.
-  final bool _isSubscribed = false;
-  bool get isSubscribed => _isSubscribed;
+  /// Consulta el estado de suscripción desde PaymentProvider.
+  bool get isSubscribed => _paymentProvider?.isSubscriber ?? false;
 
   /// Carga las grabaciones desde el directorio de la app.
   Future<void> loadRecordings() async {
