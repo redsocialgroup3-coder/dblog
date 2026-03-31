@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 
 import 'app.dart';
 import 'core/auth/auth_provider.dart';
+import 'core/notifications/notification_service.dart';
 import 'core/legal/legal_provider.dart';
 import 'core/payments/payment_provider.dart';
 import 'core/payments/payment_service.dart';
@@ -35,6 +36,13 @@ void main() async {
     await PaymentService.instance.initialize();
   } catch (e) {
     log('RevenueCat no pudo inicializarse: $e');
+  }
+
+  // Inicializar notificaciones locales.
+  try {
+    await NotificationService.instance.initialize();
+  } catch (e) {
+    log('NotificationService no pudo inicializarse: $e');
   }
 
   runApp(
