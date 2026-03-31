@@ -21,6 +21,10 @@
 - [2026-03-31] firebase_core, firebase_auth, google_sign_in para auth
 - [2026-03-31] ApiService con http package para comunicación con backend, auth token automático
 - [2026-03-31] ProfileProvider con fallback local (shared_preferences) si no hay conexión
+- [2026-03-31] geocoding package para reverse geocoding (municipio desde GPS)
+- [2026-03-31] Datos offline de normativa embebidos en core/legal/data/ como constantes Dart
+- [2026-03-31] connectivity_plus para detectar online/offline y auto-sync
+- [2026-03-31] SyncService con cola persistente de uploads pendientes en shared_preferences
 
 ## Patrones del proyecto
 - Archivos en snake_case, clases en PascalCase

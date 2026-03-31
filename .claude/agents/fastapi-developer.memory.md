@@ -11,10 +11,12 @@
 - Estructura: routers/, models/, schemas/, services/, dependencies.py
 - Modelos: User, Recording, NoiseRegulation con TimestampMixin
 - Schemas: Create, Update, Response por cada modelo
-- Routers: health, auth, users
+- Routers: health, auth, users, regulations, recordings
 - Docker Compose con PostgreSQL 16 Alpine
 
 ## Errores a evitar
 - Siempre incluir nuevos routers en main.py
 - No hardcodear credenciales, usar .env.example como referencia
 - Agregar nuevas dependencias a requirements.txt
+- python-multipart necesario para endpoints con UploadFile
+- boto3 para S3/R2 compatible storage, usar presigned URLs para descargas
