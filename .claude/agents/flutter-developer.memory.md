@@ -30,6 +30,11 @@
 - [2026-03-31] PaymentProvider con consumibles (PDF individual) y suscripción mensual
 - [2026-03-31] ChangeNotifierProxyProvider para inyectar dependencias entre providers
 - [2026-03-31] url_launcher para abrir URLs externas (gestión de suscripción en store)
+- [2026-03-31] flutter_background_service para ejecución en background (vigilancia nocturna)
+- [2026-03-31] flutter_local_notifications para notificaciones locales de eventos de ruido
+- [2026-03-31] Muestreo adaptativo: 500ms pasivo / 100ms activo para optimizar batería
+- [2026-03-31] ChangeNotifierProxyProvider2 para inyectar múltiples dependencias entre providers
+- [2026-03-31] NotificationService como singleton con initialize() en main
 
 ## Patrones del proyecto
 - Archivos en snake_case, clases en PascalCase
