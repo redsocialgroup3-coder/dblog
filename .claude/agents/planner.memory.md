@@ -13,3 +13,5 @@
 ## Errores a evitar
 - No olvidar manejo de lifecycle (pausar audio en background)
 - Siempre exponer errores de servicios nativos a la UI
+- Location service debe tener graceful failure (funcionar sin GPS para offline-first)
+- Providers que dependen de otros: usar Consumer para inyectar dependencias en main.dart
