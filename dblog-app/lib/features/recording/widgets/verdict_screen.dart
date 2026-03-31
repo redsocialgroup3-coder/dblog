@@ -1,99 +1,126 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
+import '../../../core/legal/legal_provider.dart';
+import '../../../core/legal/models/verdict_result.dart';
 import '../../../shared/theme/app_theme.dart';
 import '../../history/widgets/history_screen.dart';
 
-/// Resultado de la comparación con el límite legal.
-enum VerdictType {
-  /// El promedio supera el límite legal.
-  exceeds,
-
-  /// El promedio está cerca del límite (dentro de 5 dB).
-  close,
-
-  /// El promedio no supera el límite legal.
-  safe,
-}
-
-/// Pantalla de veredicto post-grabación.
-/// Muestra el resultado de la medición comparado con el límite legal.
-class VerdictScreen extends StatelessWidget {
+/// Pantalla de veredicto post-grabacion.
+/// Muestra el resultado de la medicion comparado con el limite legal,
+/// incluyendo municipio detectado, franja horaria y normativa aplicable.
+class VerdictScreen extends StatefulWidget {
   final double avgDb;
   final double maxDb;
   final int durationSeconds;
-  final double legalLimit;
 
   const VerdictScreen({
     super.key,
     required this.avgDb,
     required this.maxDb,
     required this.durationSeconds,
-    this.legalLimit = 55.0,
   });
 
-  VerdictType get _verdict {
-    if (avgDb > legalLimit) return VerdictType.exceeds;
-    if (avgDb >= legalLimit - 5) return VerdictType.close;
-    return VerdictType.safe;
+  @override
+  State<VerdictScreen> createState() => _VerdictScreenState();
+}
+
+class _VerdictScreenState extends State<VerdictScreen> {
+  VerdictResult? _verdict;
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadVerdict();
+  }
+
+  Future<void> _loadVerdict() async {
+    final legalProvider = context.read<LegalProvider>();
+    legalProvider.refreshTimePeriod();
+    final result = await legalProvider.getVerdict(widget.avgDb);
+    if (mounted) {
+      setState(() {
+        _verdict = result;
+        _loading = false;
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final verdict = _verdict;
-
     return Scaffold(
       backgroundColor: AppTheme.background,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(24.0),
-          child: Column(
-            children: [
-              // Header.
-              Row(
-                children: [
-                  IconButton(
-                    icon: const Icon(
-                      Icons.close_rounded,
-                      color: AppTheme.textSecondary,
+          child: _loading
+              ? const Center(child: CircularProgressIndicator())
+              : Column(
+                  children: [
+                    // Header.
+                    Row(
+                      children: [
+                        IconButton(
+                          icon: const Icon(
+                            Icons.close_rounded,
+                            color: AppTheme.textSecondary,
+                          ),
+                          onPressed: () => Navigator.of(context).pop(),
+                        ),
+                        const Spacer(),
+                        const Text(
+                          'Resultado',
+                          style: TextStyle(
+                            color: AppTheme.textPrimary,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const Spacer(),
+                        const SizedBox(width: 48),
+                      ],
                     ),
-                    onPressed: () => Navigator.of(context).pop(),
-                  ),
-                  const Spacer(),
-                  const Text(
-                    'Resultado',
-                    style: TextStyle(
-                      color: AppTheme.textPrimary,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
+                    const SizedBox(height: 8),
+                    // Municipio y franja horaria.
+                    _LegalInfoBar(verdict: _verdict),
+                    const Spacer(),
+                    // Veredicto principal.
+                    if (_verdict != null) ...[
+                      _VerdictBadge(verdict: _verdict!.verdict),
+                      const SizedBox(height: 32),
+                      // Comparacion dB medido vs limite.
+                      _ComparisonCard(
+                        avgDb: widget.avgDb,
+                        maxDb: widget.maxDb,
+                        legalLimit: _verdict!.limitDb,
+                        verdict: _verdict!.verdict,
+                        differenceDb: _verdict!.differenceDb,
+                      ),
+                    ] else ...[
+                      _VerdictBadgeFallback(avgDb: widget.avgDb),
+                      const SizedBox(height: 32),
+                      _FallbackComparisonCard(
+                        avgDb: widget.avgDb,
+                        maxDb: widget.maxDb,
+                      ),
+                    ],
+                    const SizedBox(height: 16),
+                    // Normativa aplicable.
+                    if (_verdict != null)
+                      _RegulationCard(verdict: _verdict!),
+                    const SizedBox(height: 16),
+                    // Duracion de la grabacion.
+                    _InfoCard(
+                      icon: Icons.timer_outlined,
+                      label: 'Duracion',
+                      value: _formatDuration(widget.durationSeconds),
                     ),
-                  ),
-                  const Spacer(),
-                  const SizedBox(width: 48), // Balance del icono de cierre.
-                ],
-              ),
-              const Spacer(),
-              // Veredicto principal.
-              _VerdictBadge(verdict: verdict),
-              const SizedBox(height: 32),
-              // Comparación dB medido vs límite.
-              _ComparisonCard(
-                avgDb: avgDb,
-                maxDb: maxDb,
-                legalLimit: legalLimit,
-                verdict: verdict,
-              ),
-              const SizedBox(height: 16),
-              // Duración de la grabación.
-              _InfoCard(
-                icon: Icons.timer_outlined,
-                label: 'Duración',
-                value: _formatDuration(durationSeconds),
-              ),
-              const Spacer(),
-              // Botones de acción.
-              _buildActions(context),
-            ],
-          ),
+                    const Spacer(),
+                    // Botones de accion.
+                    _buildActions(context),
+                  ],
+                ),
         ),
       ),
     );
@@ -108,7 +135,7 @@ class VerdictScreen extends StatelessWidget {
           child: OutlinedButton.icon(
             onPressed: null,
             icon: const Icon(Icons.picture_as_pdf_rounded),
-            label: const Text('Generar informe PDF (próximamente)'),
+            label: const Text('Generar informe PDF (proximamente)'),
           ),
         ),
         const SizedBox(height: 12),
@@ -128,13 +155,13 @@ class VerdictScreen extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 12),
-        // Nueva medición.
+        // Nueva medicion.
         SizedBox(
           width: double.infinity,
           child: ElevatedButton.icon(
             onPressed: () => Navigator.of(context).pop(),
             icon: const Icon(Icons.mic_rounded),
-            label: const Text('Nueva medición'),
+            label: const Text('Nueva medicion'),
           ),
         ),
       ],
@@ -151,6 +178,60 @@ class VerdictScreen extends StatelessWidget {
   }
 }
 
+class _LegalInfoBar extends StatelessWidget {
+  final VerdictResult? verdict;
+
+  const _LegalInfoBar({required this.verdict});
+
+  @override
+  Widget build(BuildContext context) {
+    final legalProvider = context.watch<LegalProvider>();
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      decoration: BoxDecoration(
+        color: AppTheme.surface,
+        borderRadius: BorderRadius.circular(AppTheme.borderRadiusMd),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.location_on_outlined,
+              size: 16, color: AppTheme.accent),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              verdict?.municipality ?? legalProvider.municipality ?? 'Sin ubicacion',
+              style: const TextStyle(
+                color: AppTheme.textPrimary,
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          Container(
+            width: 1,
+            height: 16,
+            color: AppTheme.surfaceLight,
+          ),
+          const SizedBox(width: 8),
+          const Icon(Icons.schedule_outlined,
+              size: 16, color: AppTheme.warning),
+          const SizedBox(width: 4),
+          Text(
+            verdict?.timePeriod ?? legalProvider.timePeriod,
+            style: const TextStyle(
+              color: AppTheme.textSecondary,
+              fontSize: 12,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _VerdictBadge extends StatelessWidget {
   final VerdictType verdict;
 
@@ -159,23 +240,23 @@ class _VerdictBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (color, icon, title, subtitle) = switch (verdict) {
-      VerdictType.exceeds => (
+      VerdictType.supera => (
           AppTheme.danger,
           Icons.warning_rounded,
-          'SUPERA EL LÍMITE',
-          'El nivel de ruido medido supera el límite legal',
+          'SUPERA EL LIMITE',
+          'El nivel de ruido medido supera el limite legal',
         ),
-      VerdictType.close => (
+      VerdictType.cercano => (
           AppTheme.warning,
           Icons.error_outline_rounded,
-          'CERCANO AL LÍMITE',
-          'El nivel de ruido está cerca del límite legal',
+          'CERCANO AL LIMITE',
+          'El nivel de ruido esta cerca del limite legal',
         ),
-      VerdictType.safe => (
+      VerdictType.noSupera => (
           AppTheme.success,
           Icons.check_circle_outline_rounded,
           'NO SUPERA',
-          'El nivel de ruido no supera el límite legal',
+          'El nivel de ruido no supera el limite legal',
         ),
     };
 
@@ -220,25 +301,69 @@ class _VerdictBadge extends StatelessWidget {
   }
 }
 
+class _VerdictBadgeFallback extends StatelessWidget {
+  final double avgDb;
+
+  const _VerdictBadgeFallback({required this.avgDb});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Container(
+          width: 100,
+          height: 100,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: AppTheme.textSecondary.withValues(alpha: 0.15),
+          ),
+          child: const Icon(Icons.gavel_rounded,
+              color: AppTheme.textSecondary, size: 48),
+        ),
+        const SizedBox(height: 20),
+        Text(
+          '${avgDb.toStringAsFixed(1)} dB',
+          style: const TextStyle(
+            color: AppTheme.textPrimary,
+            fontSize: 32,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        const SizedBox(height: 8),
+        const Text(
+          'No se pudo determinar la normativa aplicable',
+          style: TextStyle(
+            color: AppTheme.textSecondary,
+            fontSize: 14,
+          ),
+          textAlign: TextAlign.center,
+        ),
+      ],
+    );
+  }
+}
+
 class _ComparisonCard extends StatelessWidget {
   final double avgDb;
   final double maxDb;
   final double legalLimit;
   final VerdictType verdict;
+  final double differenceDb;
 
   const _ComparisonCard({
     required this.avgDb,
     required this.maxDb,
     required this.legalLimit,
     required this.verdict,
+    required this.differenceDb,
   });
 
   @override
   Widget build(BuildContext context) {
     final verdictColor = switch (verdict) {
-      VerdictType.exceeds => AppTheme.danger,
-      VerdictType.close => AppTheme.warning,
-      VerdictType.safe => AppTheme.success,
+      VerdictType.supera => AppTheme.danger,
+      VerdictType.cercano => AppTheme.warning,
+      VerdictType.noSupera => AppTheme.success,
     };
 
     return Container(
@@ -253,7 +378,7 @@ class _ComparisonCard extends StatelessWidget {
       ),
       child: Column(
         children: [
-          // Fila: Promedio medido vs Límite legal.
+          // Fila: Promedio medido vs Limite legal.
           Row(
             children: [
               Expanded(
@@ -270,7 +395,7 @@ class _ComparisonCard extends StatelessWidget {
               ),
               Expanded(
                 child: _DbValueColumn(
-                  label: 'Límite legal',
+                  label: 'Limite legal',
                   value: legalLimit,
                   color: AppTheme.textSecondary,
                 ),
@@ -280,32 +405,150 @@ class _ComparisonCard extends StatelessWidget {
           const SizedBox(height: 16),
           const Divider(color: AppTheme.surfaceLight, height: 1),
           const SizedBox(height: 16),
-          // Máximo registrado.
+          // Diferencia y pico maximo.
           Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              const Icon(
-                Icons.arrow_upward_rounded,
-                color: AppTheme.danger,
-                size: 18,
+              // Diferencia.
+              Row(
+                children: [
+                  Icon(
+                    differenceDb >= 0
+                        ? Icons.arrow_upward_rounded
+                        : Icons.arrow_downward_rounded,
+                    color: verdictColor,
+                    size: 18,
+                  ),
+                  const SizedBox(width: 4),
+                  const Text(
+                    'Diferencia: ',
+                    style: TextStyle(
+                      color: AppTheme.textSecondary,
+                      fontSize: 12,
+                    ),
+                  ),
+                  Text(
+                    '${differenceDb >= 0 ? '+' : ''}${differenceDb.toStringAsFixed(1)} dB',
+                    style: TextStyle(
+                      color: verdictColor,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(width: 8),
-              const Text(
-                'Pico máximo: ',
-                style: TextStyle(
-                  color: AppTheme.textSecondary,
-                  fontSize: 13,
-                ),
-              ),
-              Text(
-                '${maxDb.toStringAsFixed(1)} dB',
-                style: const TextStyle(
-                  color: AppTheme.danger,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                ),
+              // Pico maximo.
+              Row(
+                children: [
+                  const Icon(
+                    Icons.arrow_upward_rounded,
+                    color: AppTheme.danger,
+                    size: 18,
+                  ),
+                  const SizedBox(width: 4),
+                  const Text(
+                    'Pico: ',
+                    style: TextStyle(
+                      color: AppTheme.textSecondary,
+                      fontSize: 12,
+                    ),
+                  ),
+                  Text(
+                    '${maxDb.toStringAsFixed(1)} dB',
+                    style: const TextStyle(
+                      color: AppTheme.danger,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
               ),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FallbackComparisonCard extends StatelessWidget {
+  final double avgDb;
+  final double maxDb;
+
+  const _FallbackComparisonCard({
+    required this.avgDb,
+    required this.maxDb,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppTheme.surface,
+        borderRadius: BorderRadius.circular(AppTheme.borderRadiusLg),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          _DbValueColumn(
+            label: 'Promedio',
+            value: avgDb,
+            color: AppTheme.textPrimary,
+          ),
+          Container(width: 1, height: 50, color: AppTheme.surfaceLight),
+          _DbValueColumn(
+            label: 'Pico maximo',
+            value: maxDb,
+            color: AppTheme.danger,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RegulationCard extends StatelessWidget {
+  final VerdictResult verdict;
+
+  const _RegulationCard({required this.verdict});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: AppTheme.surface,
+        borderRadius: BorderRadius.circular(AppTheme.borderRadiusMd),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.gavel_rounded,
+              color: AppTheme.textSecondary, size: 18),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  verdict.regulationName,
+                  style: const TextStyle(
+                    color: AppTheme.textPrimary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                if (verdict.article != null)
+                  Text(
+                    verdict.article!,
+                    style: const TextStyle(
+                      color: AppTheme.textSecondary,
+                      fontSize: 11,
+                    ),
+                  ),
+              ],
+            ),
           ),
         ],
       ),

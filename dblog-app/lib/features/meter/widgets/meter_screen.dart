@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../core/legal/legal_provider.dart';
 import '../../../shared/theme/app_theme.dart';
 import '../../history/widgets/history_screen.dart';
 import '../../profile/widgets/profile_screen.dart';
@@ -85,6 +86,8 @@ class _MeterScreenState extends State<MeterScreen> {
               children: [
                 // Header con título y acciones.
                 _buildHeader(context, provider),
+                // Info legal: municipio y límite.
+                const _LegalInfoBanner(),
                 // Overlay de grabación.
                 const RecordingOverlay(),
                 // Disclaimer de medición orientativa.
@@ -552,11 +555,267 @@ class _DisclaimerBanner extends StatelessWidget {
           SizedBox(width: 8),
           Expanded(
             child: Text(
-              'Medición orientativa - no sustituye sonómetro homologado',
+              'Medicion orientativa - no sustituye sonometro homologado',
               style: TextStyle(fontSize: 11, color: AppTheme.warning),
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _LegalInfoBanner extends StatelessWidget {
+  const _LegalInfoBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<LegalProvider>(
+      builder: (context, legal, _) {
+        final municipality = legal.municipality;
+        final limit = legal.currentLegalLimit;
+        final timePeriod = legal.timePeriod;
+
+        return GestureDetector(
+          onTap: () => _showMunicipalitySelector(context, legal),
+          child: Container(
+            width: double.infinity,
+            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: AppTheme.surface,
+              borderRadius: BorderRadius.circular(AppTheme.borderRadiusSm),
+              border: Border.all(
+                color: AppTheme.surfaceLight,
+                width: 1,
+              ),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.location_on_outlined,
+                    size: 14, color: AppTheme.accent),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    municipality ?? 'Detectando...',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppTheme.textPrimary,
+                      fontWeight: FontWeight.w500,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                if (limit != null) ...[
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: AppTheme.danger.withValues(alpha: 0.15),
+                      borderRadius:
+                          BorderRadius.circular(AppTheme.borderRadiusSm),
+                    ),
+                    child: Text(
+                      '${limit.toInt()} dB',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: AppTheme.danger,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                ],
+                Text(
+                  timePeriod,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: AppTheme.textSecondary,
+                  ),
+                ),
+                const SizedBox(width: 4),
+                const Icon(Icons.chevron_right_rounded,
+                    size: 16, color: AppTheme.textSecondary),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showMunicipalitySelector(
+      BuildContext context, LegalProvider legal) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppTheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (_) => _MunicipalitySheet(legal: legal),
+    );
+  }
+}
+
+class _MunicipalitySheet extends StatelessWidget {
+  final LegalProvider legal;
+
+  const _MunicipalitySheet({required this.legal});
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Text(
+                  'Seleccionar municipio',
+                  style: TextStyle(
+                    color: AppTheme.textPrimary,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const Spacer(),
+                if (legal.isManualMunicipality)
+                  TextButton.icon(
+                    onPressed: () {
+                      legal.resetToAutoDetect();
+                      Navigator.of(context).pop();
+                    },
+                    icon: const Icon(Icons.gps_fixed_rounded, size: 16),
+                    label: const Text('Auto-detectar'),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            // Zone type selector.
+            Row(
+              children: [
+                const Text('Zona: ',
+                    style:
+                        TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
+                const SizedBox(width: 8),
+                _ZoneChip(
+                  label: 'Residencial',
+                  selected: legal.zoneType == 'residencial',
+                  onTap: () => legal.setZoneType('residencial'),
+                ),
+                const SizedBox(width: 6),
+                _ZoneChip(
+                  label: 'Comercial',
+                  selected: legal.zoneType == 'comercial',
+                  onTap: () => legal.setZoneType('comercial'),
+                ),
+                const SizedBox(width: 6),
+                _ZoneChip(
+                  label: 'Industrial',
+                  selected: legal.zoneType == 'industrial',
+                  onTap: () => legal.setZoneType('industrial'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            // Noise type selector.
+            Row(
+              children: [
+                const Text('Tipo: ',
+                    style:
+                        TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
+                const SizedBox(width: 8),
+                _ZoneChip(
+                  label: 'Exterior',
+                  selected: legal.noiseType == 'exterior',
+                  onTap: () => legal.setNoiseType('exterior'),
+                ),
+                const SizedBox(width: 6),
+                _ZoneChip(
+                  label: 'Interior',
+                  selected: legal.noiseType == 'interior',
+                  onTap: () => legal.setNoiseType('interior'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            const Divider(color: AppTheme.surfaceLight),
+            SizedBox(
+              height: 250,
+              child: ListView.builder(
+                itemCount: legal.availableMunicipalities.length,
+                itemBuilder: (context, index) {
+                  final m = legal.availableMunicipalities[index];
+                  final isSelected = m == legal.municipality;
+                  return ListTile(
+                    title: Text(
+                      m,
+                      style: TextStyle(
+                        color: isSelected
+                            ? AppTheme.accent
+                            : AppTheme.textPrimary,
+                        fontWeight:
+                            isSelected ? FontWeight.w600 : FontWeight.w400,
+                      ),
+                    ),
+                    trailing: isSelected
+                        ? const Icon(Icons.check_rounded,
+                            color: AppTheme.accent, size: 20)
+                        : null,
+                    onTap: () {
+                      legal.setMunicipality(m);
+                      Navigator.of(context).pop();
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ZoneChip extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _ZoneChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        decoration: BoxDecoration(
+          color: selected
+              ? AppTheme.accent.withValues(alpha: 0.15)
+              : AppTheme.surfaceLight,
+          borderRadius: BorderRadius.circular(AppTheme.borderRadiusSm),
+          border: Border.all(
+            color: selected
+                ? AppTheme.accent.withValues(alpha: 0.4)
+                : Colors.transparent,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            color: selected ? AppTheme.accent : AppTheme.textSecondary,
+            fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+          ),
+        ),
       ),
     );
   }

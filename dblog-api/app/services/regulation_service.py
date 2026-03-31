@@ -4,8 +4,12 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models.noise_regulation import NoiseRegulation
+from app.schemas.noise_regulation import VerdictEnum, VerdictResponse
 
 FALLBACK_MUNICIPALITY = "España (Ley 37/2003)"
+
+# Margen en dB para considerar "cercano al límite"
+CLOSE_MARGIN_DB = 5.0
 
 
 def get_regulations(
@@ -67,3 +71,38 @@ def get_municipalities(db: Session) -> list[str]:
         .order_by(NoiseRegulation.municipality)
     )
     return list(db.execute(stmt).scalars().all())
+
+
+def compute_verdict(
+    db: Session,
+    municipality: str,
+    zone_type: str,
+    time_period: str,
+    noise_type: str,
+    measured_db: float,
+) -> Optional[VerdictResponse]:
+    """Calcula el veredicto legal comparando la medición con el límite aplicable."""
+    regulation = lookup_limit(db, municipality, zone_type, time_period, noise_type)
+    if regulation is None:
+        return None
+
+    limit_db = regulation.db_limit
+    difference = measured_db - limit_db
+
+    if measured_db > limit_db:
+        verdict = VerdictEnum.SUPERA
+    elif measured_db >= limit_db - CLOSE_MARGIN_DB:
+        verdict = VerdictEnum.CERCANO
+    else:
+        verdict = VerdictEnum.NO_SUPERA
+
+    return VerdictResponse(
+        limit_db=limit_db,
+        measured_db=measured_db,
+        difference_db=round(difference, 1),
+        verdict=verdict,
+        regulation_name=regulation.regulation_name,
+        article=regulation.article,
+        time_period_detected=time_period,
+        municipality=regulation.municipality,
+    )
