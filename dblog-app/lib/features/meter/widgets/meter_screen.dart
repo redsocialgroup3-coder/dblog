@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../recording/providers/recording_provider.dart';
+import '../../recording/widgets/recording_overlay.dart';
 import '../models/db_reading.dart';
 import '../providers/meter_provider.dart';
 import 'calibration_dialog.dart';
@@ -73,6 +75,23 @@ class MeterScreen extends StatelessWidget {
             });
           }
 
+          // Mostrar error de grabación si lo hay.
+          final recordingProvider = context.read<RecordingProvider>();
+          if (recordingProvider.errorMessage != null) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(recordingProvider.errorMessage!),
+                  action: SnackBarAction(
+                    label: 'OK',
+                    onPressed: recordingProvider.clearError,
+                  ),
+                ),
+              );
+              recordingProvider.clearError();
+            });
+          }
+
           // Estado inicial: no se ha iniciado ninguna medición.
           if (!provider.hasStarted && !provider.isListening) {
             return const _EmptyStateView();
@@ -81,6 +100,8 @@ class MeterScreen extends StatelessWidget {
           return SafeArea(
             child: Column(
               children: [
+                // Overlay de grabación.
+                const RecordingOverlay(),
                 // Disclaimer de medición orientativa.
                 const _DisclaimerBanner(),
                 const SizedBox(height: 24),
@@ -114,20 +135,68 @@ class MeterScreen extends StatelessWidget {
           );
         },
       ),
-      floatingActionButton: Consumer<MeterProvider>(
-        builder: (context, provider, _) {
-          final listening = provider.isListening;
-          return FloatingActionButton.large(
-            onPressed: listening ? provider.stop : provider.start,
-            backgroundColor: listening ? Colors.red : Colors.green,
-            child: Icon(
-              listening ? Icons.stop : Icons.mic,
-              size: 36,
-            ),
-          );
-        },
-      ),
+      floatingActionButton: _buildFabs(context),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+    );
+  }
+
+  Widget _buildFabs(BuildContext context) {
+    return Consumer2<MeterProvider, RecordingProvider>(
+      builder: (context, meterProvider, recordingProvider, _) {
+        final listening = meterProvider.isListening;
+        final isRecording = recordingProvider.isRecording;
+        final isSaving = recordingProvider.isSaving;
+
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // Botón principal: start/stop medidor.
+              FloatingActionButton.large(
+                heroTag: 'meter_fab',
+                onPressed:
+                    isRecording ? null : (listening ? meterProvider.stop : meterProvider.start),
+                backgroundColor: isRecording
+                    ? Colors.grey
+                    : (listening ? Colors.red : Colors.green),
+                child: Icon(
+                  listening ? Icons.stop : Icons.mic,
+                  size: 36,
+                ),
+              ),
+              // Botón secundario: grabar audio (solo visible cuando el medidor está activo).
+              if (listening) ...[
+                const SizedBox(width: 16),
+                FloatingActionButton(
+                  heroTag: 'record_fab',
+                  onPressed: isSaving
+                      ? null
+                      : (isRecording
+                          ? recordingProvider.stopRecording
+                          : recordingProvider.startRecording),
+                  backgroundColor: isSaving
+                      ? Colors.grey
+                      : (isRecording ? Colors.red.shade800 : Colors.orange),
+                  child: isSaving
+                      ? const SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : Icon(
+                          isRecording ? Icons.stop : Icons.fiber_manual_record,
+                          size: 28,
+                        ),
+                ),
+              ],
+            ],
+          ),
+        );
+      },
     );
   }
 }
