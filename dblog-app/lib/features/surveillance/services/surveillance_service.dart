@@ -6,6 +6,7 @@ import 'package:flutter/widgets.dart';
 import 'package:noise_meter/noise_meter.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../../core/audio/battery_optimized_listener.dart';
 import '../../../core/audio/noise_meter_service.dart';
 import '../../../core/calibration/calibration_service.dart';
 import '../../../core/constants/audio_constants.dart';
@@ -23,6 +24,9 @@ enum SurveillanceState {
 
   /// Detectó pico, grabando audio (muestreo cada 100ms).
   recording,
+
+  /// Auto-pausado por batería baja.
+  pausedLowBattery,
 }
 
 /// Lectura de dB con timestamp para el buffer circular.
@@ -42,12 +46,15 @@ class _DbSample {
 ///
 /// Optimización de batería:
 /// - Modo pasivo (listening): muestreo cada 500ms
+/// - Modo alerta: cuando dB > (umbral - 10dB), sube a 100ms
 /// - Modo activo (recording): muestreo cada 100ms
+/// - Auto-pause cuando batería < 15%
 class SurveillanceService {
   final NoiseMeterService _noiseMeterService;
   final RecordingService _recordingService;
   final CalibrationService _calibrationService;
   final NotificationService _notificationService;
+  final BatteryOptimizedListener _batteryListener;
 
   StreamSubscription<NoiseReading>? _noiseSubscription;
 
@@ -62,6 +69,18 @@ class SurveillanceService {
   /// Nivel actual de dB.
   double _currentDb = 0.0;
   double get currentDb => _currentDb;
+
+  /// Nivel de batería actual (0-100).
+  int get batteryLevel => _batteryListener.batteryLevel;
+
+  /// Si la batería está baja.
+  bool get isLowBattery => _batteryListener.isLowBattery;
+
+  /// Si se auto-pausó por batería baja.
+  bool get isAutoPaused => _batteryListener.isAutoPaused;
+
+  /// Modo de muestreo actual del listener optimizado.
+  SamplingMode get samplingMode => _batteryListener.mode;
 
   /// Buffer circular de 5 segundos (50 samples a 100ms o 10 a 500ms).
   /// Se mantiene siempre con las últimas lecturas.
@@ -97,31 +116,31 @@ class SurveillanceService {
   DateTime? _eventStartTime;
   String? _currentRecordingFileName;
 
-  /// Timer para muestreo adaptativo.
-  Timer? _sampleTimer;
-
-  /// Intervalo de muestreo pasivo (500ms para ahorrar batería).
-  static const int _passiveIntervalMs = 500;
-
-  /// Intervalo de muestreo activo (100ms durante grabación).
-  static const int _activeIntervalMs = 100;
-
   /// Última lectura cruda del noise meter.
   double _lastRawDb = 0.0;
 
+  /// Contador para throttle de notifyListeners en modo pasivo.
+  int _passiveSampleCount = 0;
+
   /// Callback para notificar cambios de estado.
   VoidCallback? onStateChanged;
+
+  /// Callback cuando se auto-pausa por batería baja.
+  VoidCallback? onAutoPausedByBattery;
 
   SurveillanceService({
     NoiseMeterService? noiseMeterService,
     RecordingService? recordingService,
     CalibrationService? calibrationService,
     NotificationService? notificationService,
+    BatteryOptimizedListener? batteryListener,
   })  : _noiseMeterService = noiseMeterService ?? NoiseMeterService(),
         _recordingService = recordingService ?? RecordingService(),
         _calibrationService = calibrationService ?? CalibrationService(),
         _notificationService =
-            notificationService ?? NotificationService.instance;
+            notificationService ?? NotificationService.instance,
+        _batteryListener =
+            batteryListener ?? BatteryOptimizedListener();
 
   /// Inicia la vigilancia con el umbral dado.
   Future<void> start({required double threshold}) async {
@@ -132,6 +151,11 @@ class SurveillanceService {
     _events.clear();
     _buffer.clear();
     _belowThresholdMs = 0;
+    _passiveSampleCount = 0;
+
+    // Configurar battery listener.
+    _batteryListener.onSampleTick = _onSampleTick;
+    _batteryListener.onAutoPause = _onAutoPause;
 
     // Iniciar escucha del micrófono.
     _noiseMeterService.start();
@@ -142,8 +166,8 @@ class SurveillanceService {
 
     _state = SurveillanceState.listening;
 
-    // Iniciar muestreo pasivo.
-    _startSampling(_passiveIntervalMs);
+    // Iniciar muestreo adaptativo via battery listener.
+    await _batteryListener.start(threshold: threshold);
 
     onStateChanged?.call();
   }
@@ -157,8 +181,7 @@ class SurveillanceService {
       await _stopCurrentRecording();
     }
 
-    _sampleTimer?.cancel();
-    _sampleTimer = null;
+    _batteryListener.stop();
 
     _noiseSubscription?.cancel();
     _noiseSubscription = null;
@@ -184,36 +207,66 @@ class SurveillanceService {
     debugPrint('SurveillanceService: NoiseMeter error: $error');
   }
 
-  /// Inicia el timer de muestreo con el intervalo dado.
-  void _startSampling(int intervalMs) {
-    _sampleTimer?.cancel();
-    _sampleTimer = Timer.periodic(
-      Duration(milliseconds: intervalMs),
-      (_) => _processSample(),
-    );
+  /// Callback del timer de muestreo adaptativo.
+  void _onSampleTick(int intervalMs) {
+    _processSample(intervalMs);
+  }
+
+  /// Callback de auto-pause por batería baja.
+  void _onAutoPause() {
+    if (_state == SurveillanceState.recording) {
+      _stopCurrentRecording();
+    }
+    _state = SurveillanceState.pausedLowBattery;
+    onAutoPausedByBattery?.call();
+    onStateChanged?.call();
   }
 
   /// Procesa una muestra de dB según el estado actual.
-  void _processSample() {
+  void _processSample(int intervalMs) {
     _currentDb = _lastRawDb;
     if (_currentDb <= 0) return;
 
     final now = DateTime.now();
 
-    // Agregar al buffer circular.
+    // En modo pasivo, solo procesar último sample (no buffer completo).
+    if (_batteryListener.mode == SamplingMode.passive) {
+      _passiveSampleCount++;
+      // Solo notificar cada 2 samples en pasivo (cada 1s en vez de 500ms).
+      final shouldNotify = _passiveSampleCount % 2 == 0;
+
+      // Notificar al battery listener para transiciones.
+      _batteryListener.onDbReading(_currentDb);
+
+      if (_currentDb >= _threshold) {
+        _startRecording(now);
+        return;
+      }
+
+      if (shouldNotify) {
+        onStateChanged?.call();
+      }
+      return;
+    }
+
+    // En modo alerta o recording, procesar normalmente con buffer.
     _buffer.addLast(_DbSample(timestamp: now, db: _currentDb));
     while (_buffer.length > _bufferCapacity) {
       _buffer.removeFirst();
     }
+
+    // Notificar al battery listener para transiciones.
+    _batteryListener.onDbReading(_currentDb);
 
     switch (_state) {
       case SurveillanceState.listening:
         _processListeningSample(now);
         break;
       case SurveillanceState.recording:
-        _processRecordingSample(now);
+        _processRecordingSample(now, intervalMs);
         break;
       case SurveillanceState.idle:
+      case SurveillanceState.pausedLowBattery:
         break;
     }
 
@@ -229,7 +282,7 @@ class SurveillanceService {
   }
 
   /// Procesa muestra en modo grabación activa.
-  void _processRecordingSample(DateTime now) {
+  void _processRecordingSample(DateTime now, int intervalMs) {
     // Acumular estadísticas del evento.
     _eventMaxDb = math.max(_eventMaxDb, _currentDb);
     _eventSumDb += _currentDb;
@@ -237,7 +290,7 @@ class SurveillanceService {
 
     if (_currentDb < _threshold) {
       // Por debajo del umbral: acumular tiempo.
-      _belowThresholdMs += _activeIntervalMs;
+      _belowThresholdMs += intervalMs;
 
       if (_belowThresholdMs >= _belowThresholdStopMs) {
         // 10 segundos consecutivos por debajo: detener.
@@ -258,9 +311,10 @@ class SurveillanceService {
       _eventSumDb = _currentDb;
       _eventSampleCount = 1;
       _eventStartTime = triggerTime;
+      _passiveSampleCount = 0;
 
-      // Cambiar a muestreo activo (100ms).
-      _startSampling(_activeIntervalMs);
+      // Cambiar a muestreo activo via battery listener.
+      _batteryListener.enterRecordingMode();
 
       // Iniciar grabación de audio.
       final uuid = const Uuid().v4();
@@ -272,7 +326,7 @@ class SurveillanceService {
       debugPrint('SurveillanceService: error iniciando grabación: $e');
       // Volver a modo escucha si falla la grabación.
       _state = SurveillanceState.listening;
-      _startSampling(_passiveIntervalMs);
+      _batteryListener.exitRecordingMode();
     }
   }
 
@@ -314,16 +368,17 @@ class SurveillanceService {
     _eventSampleCount = 0;
     _eventStartTime = null;
     _currentRecordingFileName = null;
+    _passiveSampleCount = 0;
 
-    // Cambiar a muestreo pasivo (500ms).
-    _startSampling(_passiveIntervalMs);
+    // Volver a muestreo adaptativo via battery listener.
+    _batteryListener.exitRecordingMode();
 
     onStateChanged?.call();
   }
 
   /// Libera recursos.
   void dispose() {
-    _sampleTimer?.cancel();
+    _batteryListener.dispose();
     _noiseSubscription?.cancel();
     _noiseMeterService.dispose();
     _recordingService.dispose();

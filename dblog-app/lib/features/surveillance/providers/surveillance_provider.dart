@@ -24,13 +24,24 @@ class SurveillanceProvider extends ChangeNotifier {
   final NotificationService _notificationService;
 
   /// Si la vigilancia está activa.
-  bool get isActive => _service.state != SurveillanceState.idle;
+  bool get isActive =>
+      _service.state != SurveillanceState.idle &&
+      _service.state != SurveillanceState.pausedLowBattery;
 
   /// Si está grabando un pico en este momento.
   bool get isRecording => _service.state == SurveillanceState.recording;
 
+  /// Si se auto-pausó por batería baja.
+  bool get isAutoPaused => _service.isAutoPaused;
+
   /// Nivel actual de dB.
   double get currentDb => _service.currentDb;
+
+  /// Nivel de batería actual (0-100).
+  int get batteryLevel => _service.batteryLevel;
+
+  /// Si la batería está por debajo del umbral.
+  bool get isLowBattery => _service.isLowBattery;
 
   /// Umbral configurado por el usuario (persistido).
   double _threshold = 65.0;
@@ -67,6 +78,7 @@ class SurveillanceProvider extends ChangeNotifier {
             notificationService ?? NotificationService.instance,
         _service = service ?? SurveillanceService() {
     _service.onStateChanged = _onServiceStateChanged;
+    _service.onAutoPausedByBattery = _onAutoPausedByBattery;
     _notificationService.onNotificationTapped = _onNotificationTapped;
     _loadThreshold();
   }
@@ -78,6 +90,15 @@ class SurveillanceProvider extends ChangeNotifier {
 
   /// Callback cuando el servicio cambia de estado.
   void _onServiceStateChanged() {
+    notifyListeners();
+  }
+
+  /// Callback cuando se auto-pausa por batería baja.
+  void _onAutoPausedByBattery() {
+    _durationTimer?.cancel();
+    _durationTimer = null;
+    _errorMessage =
+        'Vigilancia pausada automáticamente: batería baja (${_service.batteryLevel}%).';
     notifyListeners();
   }
 
@@ -144,7 +165,7 @@ class SurveillanceProvider extends ChangeNotifier {
   ///
   /// Retorna la lista de eventos detectados durante la sesión.
   Future<List<SurveillanceEvent>> stop() async {
-    if (!isActive) return [];
+    if (!isActive && !isAutoPaused) return [];
 
     _durationTimer?.cancel();
     _durationTimer = null;
