@@ -1,26 +1,29 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../../../core/constants/audio_constants.dart';
+import '../../../core/legal/legal_provider.dart';
 import '../../../shared/theme/app_theme.dart';
 import '../models/db_reading.dart';
 
 /// Gráfica en tiempo real de los últimos 60 segundos de lecturas de dB.
-/// Incluye línea de referencia del límite legal.
+/// Incluye línea de referencia del límite legal dinámico.
 class DbChart extends StatelessWidget {
   final List<DbReading> readings;
   final DateTime? sessionStart;
-  final double legalLimit;
 
   const DbChart({
     super.key,
     required this.readings,
     this.sessionStart,
-    this.legalLimit = 55.0,
   });
 
   @override
   Widget build(BuildContext context) {
+    final legalProvider = context.watch<LegalProvider>();
+    final legalLimit = legalProvider.currentLegalLimit ?? 65.0;
+
     final spots = _buildSpots();
 
     double maxX = AudioConstants.chartWindowSeconds.toDouble();
