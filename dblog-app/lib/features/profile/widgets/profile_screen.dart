@@ -6,6 +6,8 @@ import '../../../core/payments/payment_provider.dart';
 import '../../../core/sync/sync_provider.dart';
 import '../../../shared/theme/app_theme.dart';
 import '../../auth/widgets/login_screen.dart';
+import '../../legal/widgets/privacy_policy_screen.dart';
+import '../../legal/widgets/terms_screen.dart';
 import '../../subscription/widgets/subscription_screen.dart';
 import '../providers/profile_provider.dart';
 
@@ -239,6 +241,31 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                   // Seccion: Suscripcion.
                   _buildSubscriptionSection(),
+
+                  const SizedBox(height: 32),
+
+                  // Seccion: Legal.
+                  _buildSectionTitle('Legal'),
+                  const SizedBox(height: 12),
+                  _buildLegalLink(
+                    icon: Icons.privacy_tip_outlined,
+                    label: 'Política de privacidad',
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const PrivacyPolicyScreen(),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  _buildLegalLink(
+                    icon: Icons.description_outlined,
+                    label: 'Términos de uso',
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const TermsScreen(),
+                      ),
+                    ),
+                  ),
 
                   const SizedBox(height: 32),
 
@@ -651,6 +678,42 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildLegalLink({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(AppTheme.borderRadiusMd),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppTheme.surface,
+          borderRadius: BorderRadius.circular(AppTheme.borderRadiusMd),
+          border: Border.all(color: AppTheme.surfaceLight),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: AppTheme.textSecondary, size: 20),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                label,
+                style: const TextStyle(
+                  color: AppTheme.textPrimary,
+                  fontSize: 14,
+                ),
+              ),
+            ),
+            const Icon(Icons.chevron_right,
+                color: AppTheme.textSecondary, size: 20),
+          ],
+        ),
       ),
     );
   }
