@@ -11,6 +11,13 @@
 - [2026-03-31] uuid package para IDs únicos de grabaciones
 - [2026-03-31] Metadatos de grabación se almacenan como JSON junto al archivo de audio (.json con mismo nombre)
 - [2026-03-31] Timer countdown con límite de 60s para tier gratuito, auto-stop al llegar al límite
+- [2026-03-31] just_audio ^0.9.43 para reproducción de audio en historial
+- [2026-03-31] CustomPainter para visualización de onda en detalle de grabación
+- [2026-03-31] Onboarding con PageView, shared_preferences para persistir estado completado
+- [2026-03-31] Tema oscuro profesional: fondo #1A1A2E, accent #00D4AA, danger #FF4757, warning #FFA502
+- [2026-03-31] Gauge circular con CustomPainter para display de dB prominente
+- [2026-03-31] Línea de referencia legal en gráfica fl_chart (ExtraLinesData horizontal)
+- [2026-03-31] Verdict screen con 3 estados: SUPERA (rojo), CERCANO (amarillo), NO SUPERA (verde)
 
 ## Patrones del proyecto
 - Archivos en snake_case, clases en PascalCase
