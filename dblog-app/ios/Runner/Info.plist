@@ -53,6 +53,11 @@
 	<string>dBLog necesita acceso al micrófono para medir el nivel de ruido en decibelios.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>dBLog utiliza tu ubicación para adjuntar coordenadas geográficas a las grabaciones de audio.</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>audio</string>
+		<string>processing</string>
+	</array>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>

@@ -16,6 +16,7 @@ import 'features/onboarding/providers/onboarding_provider.dart';
 import 'features/profile/providers/profile_provider.dart';
 import 'features/recording/providers/recording_provider.dart';
 import 'features/report/providers/report_provider.dart';
+import 'features/surveillance/providers/surveillance_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -73,6 +74,19 @@ void main() async {
                 update: (_, paymentProvider, historyProvider) {
                   historyProvider!.setPaymentProvider(paymentProvider);
                   return historyProvider;
+                },
+              ),
+              ChangeNotifierProxyProvider<PaymentProvider,
+                  SurveillanceProvider>(
+                create: (_) => SurveillanceProvider(
+                  paymentProvider: PaymentProvider(),
+                ),
+                update: (_, paymentProvider, surveillanceProvider) {
+                  // Recrear solo si no existe aún.
+                  return surveillanceProvider ??
+                      SurveillanceProvider(
+                        paymentProvider: paymentProvider,
+                      );
                 },
               ),
             ],
