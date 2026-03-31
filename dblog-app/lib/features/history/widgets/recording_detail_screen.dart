@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 
 import '../../../shared/theme/app_theme.dart';
 import '../../recording/models/recording.dart';
+import '../../report/widgets/report_form_screen.dart';
 import '../providers/history_provider.dart';
 
 /// Pantalla de detalle de una grabación con reproducción de audio,
@@ -358,6 +359,26 @@ class _RecordingDetailScreenState extends State<RecordingDetailScreen> {
                     ],
                   ),
                 ),
+
+              const SizedBox(height: 24),
+
+              // Botón generar informe PDF.
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => ReportFormScreen(
+                          preselectedRecording: recording,
+                        ),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.picture_as_pdf_rounded),
+                  label: const Text('Generar informe PDF'),
+                ),
+              ),
             ],
           ),
         ),
