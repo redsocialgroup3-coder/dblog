@@ -51,6 +51,106 @@ class ApiService {
     await _request('DELETE', path, expectBody: false);
   }
 
+  /// Realiza una petición GET que retorna una lista.
+  Future<List<dynamic>> getList(String path) async {
+    final uri = Uri.parse('$_baseUrl$path');
+
+    try {
+      final request = await _client.getUrl(uri);
+
+      final token = await _getToken();
+      if (token != null) {
+        request.headers.set('Authorization', 'Bearer $token');
+      }
+
+      final response = await request.close();
+      final responseBody = await response.transform(utf8.decoder).join();
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        if (responseBody.isEmpty) return [];
+        return jsonDecode(responseBody) as List<dynamic>;
+      }
+
+      String detail = 'Error del servidor';
+      if (responseBody.isNotEmpty) {
+        try {
+          final errorJson = jsonDecode(responseBody);
+          detail = errorJson['detail'] ?? detail;
+        } catch (_) {}
+      }
+      throw ApiException(response.statusCode, detail);
+    } on SocketException catch (e) {
+      log('Error de conexion: $e');
+      throw ApiException(0, 'No se pudo conectar con el servidor');
+    }
+  }
+
+  /// Sube un archivo con multipart/form-data.
+  Future<Map<String, dynamic>> uploadFile(
+    String path, {
+    required File file,
+    required Map<String, String> fields,
+  }) async {
+    final uri = Uri.parse('$_baseUrl$path');
+
+    try {
+      final request = await _client.postUrl(uri);
+
+      final token = await _getToken();
+      if (token != null) {
+        request.headers.set('Authorization', 'Bearer $token');
+      }
+
+      // Construir multipart request manualmente.
+      final boundary = 'boundary-${DateTime.now().millisecondsSinceEpoch}';
+      request.headers.contentType =
+          ContentType('multipart', 'form-data', parameters: {'boundary': boundary});
+
+      final sb = StringBuffer();
+
+      // Campos de texto.
+      for (final entry in fields.entries) {
+        sb.writeln('--$boundary');
+        sb.writeln('Content-Disposition: form-data; name="${entry.key}"');
+        sb.writeln();
+        sb.writeln(entry.value);
+      }
+
+      // Campo archivo.
+      final fileName = file.path.split('/').last;
+      sb.writeln('--$boundary');
+      sb.writeln(
+          'Content-Disposition: form-data; name="file"; filename="$fileName"');
+      sb.writeln('Content-Type: audio/mp4');
+      sb.writeln();
+
+      final fileBytes = await file.readAsBytes();
+      request.write(sb.toString());
+      request.add(fileBytes);
+      request.write('\r\n--$boundary--\r\n');
+
+      final response = await request.close();
+      final responseBody = await response.transform(utf8.decoder).join();
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        if (responseBody.isEmpty) return {};
+        return jsonDecode(responseBody) as Map<String, dynamic>;
+      }
+
+      String detail = 'Error del servidor';
+      if (responseBody.isNotEmpty) {
+        try {
+          final errorJson = jsonDecode(responseBody);
+          detail = errorJson['detail'] ?? detail;
+        } catch (_) {}
+      }
+      throw ApiException(response.statusCode, detail);
+    } on SocketException catch (e) {
+      log('Error de conexion: $e');
+      throw ApiException(0, 'No se pudo conectar con el servidor');
+    }
+  }
+
   Future<Map<String, dynamic>> _request(
     String method,
     String path, {
