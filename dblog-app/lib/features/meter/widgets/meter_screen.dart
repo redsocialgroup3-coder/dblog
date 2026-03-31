@@ -39,6 +39,27 @@ class MeterScreen extends StatelessWidget {
             );
           }
 
+          // Mostrar error si lo hay.
+          if (provider.errorMessage != null) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(provider.errorMessage!),
+                  action: SnackBarAction(
+                    label: 'OK',
+                    onPressed: provider.clearError,
+                  ),
+                ),
+              );
+              provider.clearError();
+            });
+          }
+
+          // Estado inicial: no se ha iniciado ninguna medición.
+          if (!provider.hasStarted && !provider.isListening) {
+            return const _EmptyStateView();
+          }
+
           return SafeArea(
             child: Column(
               children: [
@@ -87,6 +108,37 @@ class MeterScreen extends StatelessWidget {
         },
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+    );
+  }
+}
+
+class _EmptyStateView extends StatelessWidget {
+  const _EmptyStateView();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32.0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.mic_none, size: 80, color: Colors.grey.shade400),
+            const SizedBox(height: 24),
+            const Text(
+              'Medidor de ruido',
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.w600),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Pulsa el botón para comenzar a medir el nivel de ruido en decibelios.',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

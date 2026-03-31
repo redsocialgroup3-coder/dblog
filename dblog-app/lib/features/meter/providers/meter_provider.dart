@@ -36,6 +36,11 @@ class MeterProvider extends ChangeNotifier with WidgetsBindingObserver {
   bool _permissionDeniedPermanently = false;
   bool get permissionDeniedPermanently => _permissionDeniedPermanently;
 
+  String? _errorMessage;
+  String? get errorMessage => _errorMessage;
+
+  bool get hasStarted => _sessionStart != null;
+
   /// Buffer circular de lecturas (últimos 60 segundos).
   final List<DbReading> _readings = [];
   List<DbReading> get readings => List.unmodifiable(_readings);
@@ -116,6 +121,7 @@ class MeterProvider extends ChangeNotifier with WidgetsBindingObserver {
     _sumLinearPower = 0.0;
     _totalSamples = 0;
     _sessionStart = null;
+    _errorMessage = null;
     notifyListeners();
   }
 
@@ -158,7 +164,13 @@ class MeterProvider extends ChangeNotifier with WidgetsBindingObserver {
 
   void _onNoiseError(Object error) {
     debugPrint('NoiseMeter error: $error');
+    _errorMessage = 'Error al acceder al micrófono. Verifica los permisos.';
     stop();
+  }
+
+  void clearError() {
+    _errorMessage = null;
+    notifyListeners();
   }
 
   /// Mantiene solo las últimas [AudioConstants.maxReadings] lecturas.
