@@ -76,16 +76,19 @@ void main() async {
                   return historyProvider;
                 },
               ),
-              ChangeNotifierProxyProvider<PaymentProvider,
+              ChangeNotifierProxyProvider2<PaymentProvider, LegalProvider,
                   SurveillanceProvider>(
                 create: (_) => SurveillanceProvider(
                   paymentProvider: PaymentProvider(),
+                  legalProvider: LegalProvider(),
                 ),
-                update: (_, paymentProvider, surveillanceProvider) {
+                update: (_, paymentProvider, legalProvider,
+                    surveillanceProvider) {
                   // Recrear solo si no existe aún.
                   return surveillanceProvider ??
                       SurveillanceProvider(
                         paymentProvider: paymentProvider,
+                        legalProvider: legalProvider,
                       );
                 },
               ),
