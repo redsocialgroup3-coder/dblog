@@ -65,7 +65,12 @@ De conformidad con el RGPD, el usuario tiene derecho a:
 - **Oposición** (art. 21): oponerse al tratamiento de sus datos.
 - **Retirada del consentimiento**: retirar el consentimiento en cualquier momento sin que afecte a la licitud del tratamiento previo.
 
-Para ejercer estos derechos, contacte con nosotros en: privacidad@dblog.app
+Puede ejercer estos derechos directamente desde la app:
+
+- **Portabilidad**: Desde la pantalla de perfil, pulse "Exportar mis datos" para descargar todos sus datos en formato JSON.
+- **Supresion**: Desde la pantalla de perfil, pulse "Eliminar cuenta y datos" para eliminar permanentemente todos sus datos.
+
+Para cualquier otro derecho, contacte con nosotros en: privacidad@dblog.app
 
 El usuario también tiene derecho a presentar una reclamación ante la Agencia Española de Protección de Datos (AEPD) en www.aepd.es.
 

@@ -17,6 +17,7 @@ class Settings(BaseSettings):
     R2_SECRET_ACCESS_KEY: str = ""
     R2_BUCKET_NAME: str = "dblog-recordings"
     ALLOWED_ORIGINS: str = "*"
+    ENCRYPTION_MASTER_KEY: str = "change-me-to-a-fernet-key-base64"
 
     @property
     def cors_origins(self) -> list[str]:

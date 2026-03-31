@@ -23,6 +23,7 @@ class User(TimestampMixin, Base):
     calibration_offset: Mapped[float] = mapped_column(Float, default=0.0)
     db_threshold: Mapped[float] = mapped_column(Float, default=65.0)
     is_subscriber: Mapped[bool] = mapped_column(Boolean, default=False)
+    encryption_key: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
 
     recordings: Mapped[List["Recording"]] = relationship(
         back_populates="user", cascade="all, delete-orphan"

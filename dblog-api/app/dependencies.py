@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models.user import User
+from app.services.encryption_service import encryption_service
 from app.services.firebase_service import firebase_service
 
 logger = logging.getLogger(__name__)
@@ -45,6 +46,7 @@ async def get_current_user(
             firebase_uid=firebase_data["uid"],
             email=firebase_data["email"] or "",
             display_name=firebase_data.get("name"),
+            encryption_key=encryption_service.generate_user_key(),
         )
         db.add(user)
         db.commit()
@@ -58,6 +60,10 @@ async def get_current_user(
             updated = True
         if firebase_data.get("name") and user.display_name != firebase_data["name"]:
             user.display_name = firebase_data["name"]
+            updated = True
+        # Generar clave de cifrado si el usuario no tiene una.
+        if not user.encryption_key:
+            user.encryption_key = encryption_service.generate_user_key()
             updated = True
         if updated:
             db.commit()

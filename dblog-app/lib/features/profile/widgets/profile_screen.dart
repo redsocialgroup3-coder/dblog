@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../../core/auth/auth_provider.dart';
+import '../../../core/gdpr/gdpr_service.dart';
 import '../../../core/payments/payment_provider.dart';
 import '../../../core/sync/sync_provider.dart';
 import '../../../shared/theme/app_theme.dart';
@@ -100,8 +102,42 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  Future<void> _exportData() async {
+    try {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Exportando datos...'),
+          backgroundColor: AppTheme.accent,
+        ),
+      );
+
+      final filePath = await GdprService.instance.requestDataExport();
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Datos exportados correctamente'),
+          backgroundColor: AppTheme.accent,
+        ),
+      );
+
+      // Compartir el archivo exportado.
+      await Share.shareXFiles([XFile(filePath)], text: 'Exportacion de datos dBLog');
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error al exportar datos: $e'),
+          backgroundColor: AppTheme.danger,
+        ),
+      );
+    }
+  }
+
   Future<void> _deleteAccount() async {
-    final confirmed = await showDialog<bool>(
+    // Primera confirmacion.
+    final firstConfirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppTheme.surface,
@@ -110,7 +146,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
           style: TextStyle(color: AppTheme.textPrimary),
         ),
         content: const Text(
-          'Se eliminaran todos tus datos de forma permanente. '
+          'Se eliminaran todos tus datos de forma permanente, '
+          'incluyendo grabaciones, informes y perfil. '
           'Esta accion no se puede deshacer.',
           style: TextStyle(color: AppTheme.textSecondary),
         ),
@@ -122,26 +159,54 @@ class _ProfileScreenState extends State<ProfileScreen> {
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(true),
             style: TextButton.styleFrom(foregroundColor: AppTheme.danger),
-            child: const Text('Eliminar'),
+            child: const Text('Continuar'),
           ),
         ],
       ),
     );
 
-    if (confirmed != true || !mounted) return;
+    if (firstConfirm != true || !mounted) return;
 
-    final provider = context.read<ProfileProvider>();
-    final deleted = await provider.deleteAccount();
+    // Segunda confirmacion (doble confirmacion RGPD).
+    final secondConfirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTheme.surface,
+        title: const Text(
+          'Confirmar eliminacion',
+          style: TextStyle(color: AppTheme.danger),
+        ),
+        content: const Text(
+          'Esta es tu ultima oportunidad. '
+          'Todos tus datos seran eliminados permanentemente del servidor y del dispositivo. '
+          'No podras recuperarlos.',
+          style: TextStyle(color: AppTheme.textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: TextButton.styleFrom(foregroundColor: AppTheme.danger),
+            child: const Text('Eliminar definitivamente'),
+          ),
+        ],
+      ),
+    );
 
-    if (!mounted) return;
+    if (secondConfirm != true || !mounted) return;
 
-    if (deleted) {
-      // Cerrar sesion despues de eliminar la cuenta.
+    try {
+      await GdprService.instance.deleteAllData();
+      if (!mounted) return;
       await _logout();
-    } else {
+    } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(provider.errorMessage ?? 'No se pudo eliminar la cuenta'),
+          content: Text('No se pudo eliminar la cuenta: $e'),
           backgroundColor: AppTheme.danger,
         ),
       );
@@ -269,8 +334,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                   const SizedBox(height: 32),
 
-                  // Seccion: Cuenta.
-                  _buildSectionTitle('Cuenta'),
+                  // Seccion: Cuenta y datos (RGPD).
+                  _buildSectionTitle('Cuenta y datos'),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: _exportData,
+                      icon: const Icon(Icons.download_outlined),
+                      label: const Text('Exportar mis datos'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppTheme.accent,
+                        side: const BorderSide(color: AppTheme.accent),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                    ),
+                  ),
                   const SizedBox(height: 12),
                   SizedBox(
                     width: double.infinity,
@@ -291,7 +370,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     child: OutlinedButton.icon(
                       onPressed: _deleteAccount,
                       icon: const Icon(Icons.delete_forever),
-                      label: const Text('Eliminar cuenta'),
+                      label: const Text('Eliminar cuenta y datos'),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: AppTheme.danger,
                         side: const BorderSide(color: AppTheme.danger),

@@ -53,6 +53,8 @@ dependencies:
   flutter_background_service: ^5.0.5
   flutter_local_notifications: ^18.0.0
   battery_plus: ^6.2.1
+  encrypt: ^5.0.3
+  pointycastle: ^3.9.1
 
 dev_dependencies:
   flutter_test:
