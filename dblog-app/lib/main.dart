@@ -1,14 +1,28 @@
+import 'dart:developer';
+
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'app.dart';
+import 'core/auth/auth_provider.dart';
 import 'features/history/providers/history_provider.dart';
 import 'features/meter/providers/meter_provider.dart';
 import 'features/onboarding/providers/onboarding_provider.dart';
 import 'features/recording/providers/recording_provider.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Inicializar Firebase.
+  // NOTA: Requiere google-services.json (Android) y GoogleService-Info.plist (iOS).
+  // Sin estos archivos configurados, Firebase no se inicializará.
+  try {
+    await Firebase.initializeApp();
+  } catch (e) {
+    log('Firebase no pudo inicializarse: $e');
+  }
+
   runApp(
     ChangeNotifierProvider(
       create: (_) => MeterProvider(),
@@ -25,6 +39,9 @@ void main() {
               ),
               ChangeNotifierProvider(
                 create: (_) => OnboardingProvider(),
+              ),
+              ChangeNotifierProvider(
+                create: (_) => AuthProvider(),
               ),
             ],
             child: const App(),
