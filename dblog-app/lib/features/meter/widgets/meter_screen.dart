@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../../shared/theme/app_theme.dart';
 import '../../history/widgets/history_screen.dart';
+import '../../profile/widgets/profile_screen.dart';
 import '../../recording/providers/recording_provider.dart';
 import '../../recording/widgets/recording_overlay.dart';
 import '../../recording/widgets/verdict_screen.dart';
@@ -275,7 +276,11 @@ class _MeterScreenState extends State<MeterScreen> {
                 label: 'Ajustes',
                 isActive: false,
                 onTap: () {
-                  // Por implementar en fases futuras.
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const ProfileScreen(),
+                    ),
+                  );
                 },
               ),
             ],
