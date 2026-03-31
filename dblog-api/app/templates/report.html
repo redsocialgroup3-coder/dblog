@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        @page {
+            size: A4;
+            margin: 2cm 2.5cm;
+            @bottom-center {
+                content: "Página " counter(page) " de " counter(pages);
+                font-size: 9px;
+                color: #666;
+            }
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            font-size: 11px;
+            line-height: 1.5;
+            color: #1a1a1a;
+        }
+
+        .header {
+            text-align: center;
+            border-bottom: 3px solid #1a365d;
+            padding-bottom: 15px;
+            margin-bottom: 25px;
+        }
+
+        .header h1 {
+            font-size: 22px;
+            color: #1a365d;
+            letter-spacing: 2px;
+            margin-bottom: 4px;
+        }
+
+        .header h2 {
+            font-size: 14px;
+            color: #4a5568;
+            font-weight: 400;
+        }
+
+        .section {
+            margin-bottom: 20px;
+        }
+
+        .section-title {
+            font-size: 13px;
+            font-weight: 700;
+            color: #1a365d;
+            border-bottom: 1px solid #cbd5e0;
+            padding-bottom: 4px;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .info-grid {
+            display: table;
+            width: 100%;
+        }
+
+        .info-row {
+            display: table-row;
+        }
+
+        .info-label {
+            display: table-cell;
+            font-weight: 600;
+            color: #4a5568;
+            padding: 3px 15px 3px 0;
+            width: 180px;
+            white-space: nowrap;
+        }
+
+        .info-value {
+            display: table-cell;
+            padding: 3px 0;
+        }
+
+        table.measurements {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 8px;
+        }
+
+        table.measurements th {
+            background-color: #1a365d;
+            color: white;
+            font-weight: 600;
+            text-align: left;
+            padding: 8px 10px;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        table.measurements td {
+            padding: 7px 10px;
+            border-bottom: 1px solid #e2e8f0;
+            font-size: 10.5px;
+        }
+
+        table.measurements tr:nth-child(even) {
+            background-color: #f7fafc;
+        }
+
+        .chart-container {
+            text-align: center;
+            margin: 15px 0;
+        }
+
+        .chart-container img {
+            max-width: 100%;
+            height: auto;
+        }
+
+        .verdict-box {
+            border: 2px solid #1a365d;
+            padding: 15px 20px;
+            margin: 15px 0;
+            text-align: center;
+        }
+
+        .verdict-box.supera {
+            border-color: #c53030;
+            background-color: #fff5f5;
+        }
+
+        .verdict-box.no-supera {
+            border-color: #276749;
+            background-color: #f0fff4;
+        }
+
+        .verdict-box.cercano {
+            border-color: #c05621;
+            background-color: #fffaf0;
+        }
+
+        .verdict-label {
+            font-size: 10px;
+            color: #4a5568;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 4px;
+        }
+
+        .verdict-text {
+            font-size: 18px;
+            font-weight: 700;
+        }
+
+        .verdict-text.supera { color: #c53030; }
+        .verdict-text.no-supera { color: #276749; }
+        .verdict-text.cercano { color: #c05621; }
+
+        .verdict-detail {
+            font-size: 11px;
+            color: #4a5568;
+            margin-top: 5px;
+        }
+
+        .hash-box {
+            background-color: #f7fafc;
+            border: 1px solid #e2e8f0;
+            padding: 10px 15px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 9.5px;
+            word-break: break-all;
+            margin-top: 8px;
+        }
+
+        .disclaimer {
+            margin-top: 30px;
+            padding-top: 15px;
+            border-top: 1px solid #cbd5e0;
+            font-size: 9px;
+            color: #718096;
+            text-align: justify;
+        }
+
+        .generation-info {
+            margin-top: 10px;
+            font-size: 9px;
+            color: #a0aec0;
+            text-align: right;
+        }
+
+        .watermark {
+            position: fixed;
+            top: 40%;
+            left: 10%;
+            font-size: 100px;
+            color: rgba(200, 200, 200, 0.3);
+            transform: rotate(-45deg);
+            z-index: -1;
+            font-weight: 900;
+            letter-spacing: 20px;
+            white-space: nowrap;
+        }
+    </style>
+</head>
+<body>
+
+{% if is_preview %}
+<div class="watermark">PREVIEW</div>
+{% endif %}
+
+<div class="header">
+    <h1>dBLog</h1>
+    <h2>Informe de Medici&oacute;n de Ruido</h2>
+</div>
+
+<div class="section">
+    <div class="section-title">Datos del inmueble</div>
+    <div class="info-grid">
+        <div class="info-row">
+            <span class="info-label">Direcci&oacute;n:</span>
+            <span class="info-value">{{ address }}</span>
+        </div>
+        {% if floor_door %}
+        <div class="info-row">
+            <span class="info-label">Piso / Puerta:</span>
+            <span class="info-value">{{ floor_door }}</span>
+        </div>
+        {% endif %}
+        <div class="info-row">
+            <span class="info-label">Municipio:</span>
+            <span class="info-value">{{ municipality }}</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Tipo de zona:</span>
+            <span class="info-value">{{ zone_type | capitalize }}</span>
+        </div>
+    </div>
+</div>
+
+{% if reporter_name %}
+<div class="section">
+    <div class="section-title">Datos del denunciante</div>
+    <div class="info-grid">
+        <div class="info-row">
+            <span class="info-label">Nombre:</span>
+            <span class="info-value">{{ reporter_name }}</span>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<div class="section">
+    <div class="section-title">Mediciones realizadas</div>
+    <table class="measurements">
+        <thead>
+            <tr>
+                <th>Fecha y hora</th>
+                <th>Duraci&oacute;n</th>
+                <th>dB Promedio</th>
+                <th>dB M&aacute;ximo</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for r in recordings %}
+            <tr>
+                <td>{{ r.timestamp }}</td>
+                <td>{{ r.duration }}</td>
+                <td>{{ r.avg_db }} dB</td>
+                <td>{{ r.max_db }} dB</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% if chart_image %}
+<div class="section">
+    <div class="section-title">Gr&aacute;fica de decibelios vs tiempo</div>
+    <div class="chart-container">
+        <img src="data:image/png;base64,{{ chart_image }}" alt="Gr&aacute;fica dB vs Tiempo" />
+    </div>
+</div>
+{% endif %}
+
+{% if regulation %}
+<div class="section">
+    <div class="section-title">Referencia normativa</div>
+    <div class="info-grid">
+        {% if regulation.regulation_name %}
+        <div class="info-row">
+            <span class="info-label">Ordenanza / Ley:</span>
+            <span class="info-value">{{ regulation.regulation_name }}</span>
+        </div>
+        {% endif %}
+        {% if regulation.article %}
+        <div class="info-row">
+            <span class="info-label">Art&iacute;culo:</span>
+            <span class="info-value">{{ regulation.article }}</span>
+        </div>
+        {% endif %}
+        <div class="info-row">
+            <span class="info-label">L&iacute;mite aplicable:</span>
+            <span class="info-value">{{ regulation.db_limit }} dB</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Franja horaria:</span>
+            <span class="info-value">{{ regulation.time_period | capitalize }}</span>
+        </div>
+    </div>
+</div>
+
+<div class="section">
+    <div class="section-title">Veredicto</div>
+    <div class="verdict-box {{ verdict_class }}">
+        <div class="verdict-label">Resultado de la evaluaci&oacute;n</div>
+        <div class="verdict-text {{ verdict_class }}">{{ verdict_text }}</div>
+        <div class="verdict-detail">
+            Medici&oacute;n: {{ measured_db }} dB &mdash; L&iacute;mite: {{ regulation.db_limit }} dB &mdash; Diferencia: {{ difference_db }} dB
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% if audio_hash %}
+<div class="section">
+    <div class="section-title">Integridad del audio (SHA-256)</div>
+    <p>Hash criptogr&aacute;fico del archivo de audio original como prueba de integridad:</p>
+    <div class="hash-box">{{ audio_hash }}</div>
+</div>
+{% endif %}
+
+<div class="disclaimer">
+    <strong>Aviso legal:</strong> Este informe ha sido generado autom&aacute;ticamente por la aplicaci&oacute;n dBLog.
+    La medici&oacute;n es orientativa y ha sido realizada con el micr&oacute;fono de un dispositivo m&oacute;vil,
+    por lo que puede presentar variaciones respecto a equipos de medici&oacute;n profesionales homologados.
+    Este documento no sustituye un informe pericial realizado por un t&eacute;cnico competente,
+    pero puede servir como evidencia complementaria en un proceso de denuncia por contaminaci&oacute;n ac&uacute;stica.
+    El hash SHA-256 incluido permite verificar que el archivo de audio no ha sido modificado tras la medici&oacute;n.
+</div>
+
+<div class="generation-info">
+    Informe generado el {{ generation_date }} &mdash; dBLog v{{ app_version }}
+</div>
+
+</body>
+</html>
