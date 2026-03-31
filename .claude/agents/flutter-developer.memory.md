@@ -25,6 +25,11 @@
 - [2026-03-31] Datos offline de normativa embebidos en core/legal/data/ como constantes Dart
 - [2026-03-31] connectivity_plus para detectar online/offline y auto-sync
 - [2026-03-31] SyncService con cola persistente de uploads pendientes en shared_preferences
+- [2026-03-31] share_plus para compartir archivos via share sheet nativo
+- [2026-03-31] purchases_flutter ^8.0.0 para RevenueCat (pagos in-app)
+- [2026-03-31] PaymentProvider con consumibles (PDF individual) y suscripción mensual
+- [2026-03-31] ChangeNotifierProxyProvider para inyectar dependencias entre providers
+- [2026-03-31] url_launcher para abrir URLs externas (gestión de suscripción en store)
 
 ## Patrones del proyecto
 - Archivos en snake_case, clases en PascalCase

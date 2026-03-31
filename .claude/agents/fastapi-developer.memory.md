@@ -11,7 +11,7 @@
 - Estructura: routers/, models/, schemas/, services/, dependencies.py
 - Modelos: User, Recording, NoiseRegulation con TimestampMixin
 - Schemas: Create, Update, Response por cada modelo
-- Routers: health, auth, users, regulations, recordings
+- Routers: health, auth, users, regulations, recordings, reports
 - Docker Compose con PostgreSQL 16 Alpine
 
 ## Errores a evitar
@@ -20,3 +20,6 @@
 - Agregar nuevas dependencias a requirements.txt
 - python-multipart necesario para endpoints con UploadFile
 - boto3 para S3/R2 compatible storage, usar presigned URLs para descargas
+- WeasyPrint + Jinja2 para generar PDFs desde templates HTML
+- matplotlib para gráficas embebidas en PDF como base64
+- python-multipart necesario para UploadFile en endpoints
